@@ -1,0 +1,3648 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10131b" />
+    <title>Blockly Creator</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css"
+    />
+    <script src="https://unpkg.com/blockly@12.3.1/blockly_compressed.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <style>
+      :root,
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: #10131b;
+        color: #edf0f7;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        --page: #10131b;
+        --topbar: #141720;
+        --workspace: #121620;
+        --muted: #9299aa;
+        --line: #282d3a;
+        --surface: #171b25;
+        --surface-raised: #1d2230;
+        --text: #edf0f7;
+        --button: #222735;
+        --button-hover: #2a3040;
+        --field: #151722;
+        --code: #c5b8ff;
+        --blockly-label: #d6d9e3;
+        --selected: #29233d;
+        --accent: #a78bfa;
+        --accent-text: #171321;
+      }
+      :root[data-theme="light"] {
+        color-scheme: light;
+        background: #f4f5f7;
+        color: #20242b;
+        --page: #f4f5f7;
+        --topbar: #ffffff;
+        --workspace: #f7f8fa;
+        --muted: #68707d;
+        --line: #d8dce2;
+        --surface: #ffffff;
+        --surface-raised: #eef0f3;
+        --text: #20242b;
+        --button: #f0f1f3;
+        --button-hover: #e5e7eb;
+        --field: #ffffff;
+        --code: #334155;
+        --blockly-label: #303640;
+        --selected: #e6e0f5;
+        --accent: #7056b8;
+        --accent-text: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-width: 360px;
+        height: 100vh;
+        overflow: hidden;
+        background: var(--page);
+      }
+      button {
+        font: inherit;
+      }
+
+      .app {
+        height: 100%;
+        display: grid;
+        grid-template-rows: 44px minmax(0, 1fr);
+      }
+      [hidden] {
+        display: none !important;
+      }
+
+      .tab-bar {
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--line);
+        background: var(--topbar);
+      }
+      .tab-spacer {
+        flex: 1;
+      }
+      .tab-button {
+        padding: 0 14px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .tab-button[aria-selected="true"] {
+        border-bottom-color: var(--accent);
+        color: var(--text);
+      }
+      .tab-button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+        min-height: 0;
+      }
+      main.preview-hidden {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      main.preview-hidden .preview-panel {
+        display: none;
+      }
+
+      .editor,
+      .preview-panel {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .preview-panel > .panel-heading,
+      .preview-toolbar {
+        flex: 0 0 auto;
+      }
+      .editor {
+        border-right: 1px solid var(--line);
+      }
+      .panel-heading {
+        min-height: 62px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+      }
+      .heading-copy {
+        min-width: 0;
+      }
+      .panel-title {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .panel-description {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .heading-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .button {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--button);
+        color: var(--text);
+        font-size: 11px;
+        font-weight: 650;
+        cursor: pointer;
+        transition: background 0.12s ease, border-color 0.12s ease;
+      }
+      .button:hover {
+        background: var(--button-hover);
+        border-color: var(--muted);
+      }
+      .button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .button-primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-text);
+      }
+      .button-primary:hover {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 88%, var(--text));
+      }
+      .theme-toggle {
+        min-width: 34px;
+        padding: 0 8px;
+      }
+
+      #blocklyDiv {
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        background: var(--workspace);
+      }
+      .blocklyToolboxDiv {
+        background: var(--surface) !important;
+        border-right: 1px solid var(--line);
+      }
+      .blocklyTreeRow {
+        height: 38px !important;
+        margin-bottom: 3px;
+        border-radius: 2px;
+      }
+      .blocklyTreeLabel {
+        color: var(--blockly-label) !important;
+        font:
+          12px Inter,
+          ui-sans-serif,
+          sans-serif !important;
+      }
+      .blocklyFlyout {
+        filter: drop-shadow(0 3px 6px #0002);
+      }
+      .blocklyMainBackground {
+        fill: var(--workspace) !important;
+        stroke: none !important;
+      }
+      .blocklyFlyoutBackground {
+        fill: var(--surface-raised) !important;
+      }
+      .blocklyTreeRow:not(.blocklyTreeSelected) {
+        background-color: var(--surface) !important;
+      }
+      .blocklyTreeRow.blocklyTreeSelected {
+        background-color: var(--selected) !important;
+      }
+
+      .preview-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--workspace);
+        overflow: hidden;
+      }
+      .preview-toolbar {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 10px;
+      }
+      :root[data-theme="light"] .CodeMirror {
+        border-color: var(--line);
+        background: var(--field);
+        color: var(--text);
+      }
+      :root[data-theme="light"] .CodeMirror-gutters {
+        border-color: var(--line);
+        background: var(--surface-raised);
+      }
+      :root[data-theme="light"] .CodeMirror-linenumber {
+        color: var(--muted);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+      .preview-label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #626a7d;
+      }
+      .status-dot.ready {
+        background: #69d6a4;
+        box-shadow: 0 0 8px #69d6a477;
+      }
+      .preview-frame-wrap {
+        flex: 1 1 0;
+        min-height: 0;
+        padding: 10px;
+        overflow: hidden;
+      }
+      #previewFrame {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: white;
+      }
+      .code-panel {
+        height: auto;
+        flex: 0 0 clamp(145px, 34%, 240px);
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        border-top: 1px solid var(--line);
+      }
+      .code-heading {
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 15px;
+      }
+      .code-title {
+        color: var(--text);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+      #generatedCode {
+        flex: 1;
+        width: 100%;
+        resize: none;
+        padding: 0 15px 14px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--code);
+        font:
+          11px/1.6 "Cascadia Code",
+          Consolas,
+          monospace;
+        tab-size: 2;
+      }
+      #statusMessage {
+        min-height: 17px;
+        padding: 0 15px 9px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      #statusMessage.error {
+        color: #ff9a9a;
+      }
+      :root[data-theme="light"] #statusMessage.error {
+        color: #b42332;
+      }
+      .console-panel {
+        flex: 0 0 clamp(82px, 17%, 122px);
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        border-top: 1px solid var(--line);
+      }
+      .console-heading {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px;
+      }
+      .console-heading .button {
+        min-height: 26px;
+      }
+      .console-output {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 0 14px 8px;
+        color: var(--text);
+        font: 10px/1.5 "Cascadia Code", Consolas, monospace;
+      }
+      .console-empty {
+        color: var(--muted);
+      }
+      .console-entry {
+        padding: 2px 6px;
+        border-left: 2px solid #626a7d;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .console-entry + .console-entry {
+        margin-top: 3px;
+      }
+      .console-entry.error {
+        border-left-color: #ff626e;
+        background: #451f2a;
+        color: #ffb4bb;
+      }
+      :root[data-theme="light"] .console-entry.error {
+        border-left-color: #c62828;
+        background: #fde8ea;
+        color: #9c1c2b;
+      }
+      .html-editor-tab {
+        min-height: 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .html-editor-tab > .CodeMirror {
+        width: 100%;
+        height: 0;
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 0;
+      }
+      #standaloneHtmlEditor {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+        resize: none;
+        padding: 16px;
+        border: 0;
+        outline: 0;
+        background: var(--workspace);
+        color: var(--text);
+        font: 12px/1.6 "Cascadia Code", Consolas, monospace;
+        tab-size: 2;
+      }
+      #htmlEditorStatus {
+        min-height: 24px;
+        padding: 4px 16px 8px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      #codeEditorDialog {
+        width: min(720px, calc(100vw - 32px));
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 8px 24px #0003;
+      }
+      #codeEditorDialog::backdrop {
+        background: #080a0fcc;
+      }
+      .code-editor-header,
+      .code-editor-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+      }
+      .code-editor-header {
+        border-bottom: 1px solid var(--line);
+      }
+      .code-editor-title {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .code-editor-hint {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .code-editor-footer {
+        justify-content: flex-end;
+        border-top: 1px solid var(--line);
+      }
+      .code-editor-content {
+        padding: 14px 16px;
+      }
+      .CodeMirror {
+        height: min(52vh, 420px);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--field);
+        font:
+          13px/1.55 "Cascadia Code",
+          Consolas,
+          monospace;
+      }
+      .CodeMirror-gutters {
+        border-right: 1px solid var(--line);
+        background: var(--surface-raised);
+      }
+      #plainCodeEditor {
+        width: 100%;
+        height: min(52vh, 420px);
+        resize: vertical;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        outline: 0;
+        background: var(--field);
+        color: var(--text);
+        font:
+          13px/1.55 "Cascadia Code",
+          Consolas,
+          monospace;
+        tab-size: 2;
+      }
+
+      @media (max-width: 760px) {
+        body {
+          height: auto;
+          min-height: 100vh;
+          overflow: auto;
+        }
+        .app {
+          min-height: 100vh;
+          height: auto;
+          grid-template-rows: 42px minmax(0, 1fr);
+        }
+        .tab-bar {
+          padding: 0 10px;
+        }
+        main {
+          grid-template-columns: 1fr;
+          grid-template-rows: minmax(470px, 55vh) minmax(560px, 70vh);
+        }
+        main.preview-hidden {
+          grid-template-rows: minmax(470px, 1fr);
+        }
+        .editor {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        .panel-heading {
+          padding: 10px 14px;
+          flex-wrap: wrap;
+        }
+        .heading-actions {
+          width: 100%;
+        }
+        .html-editor-tab {
+          min-height: 70vh;
+        }
+      }
+
+      @media (max-width: 440px) {
+        .panel-description {
+          max-width: 180px;
+        }
+        .button {
+          padding: 0 9px;
+        }
+      }
+      .assets-tab{min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+      .assets-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:12px;overflow:auto}
+      .assets-card{border:1px solid var(--line);border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+      .assets-drop{border:2px dashed var(--line);padding:16px;text-align:center;border-radius:4px}
+      .assets-drop.over{border-color:#00897b}
+      .asset-row{display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:6px 0}
+      .asset-thumb{width:56px;height:40px;object-fit:contain;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(128,128,128,.15);border-radius:3px}
+      .asset-row input,.assets-card textarea{min-width:0;box-sizing:border-box;background:transparent;color:inherit;border:1px solid var(--line);border-radius:3px;padding:4px 6px;font:inherit}
+      .asset-actions,.b64-actions{display:flex;gap:4px;flex-wrap:wrap}
+      .b64-area{width:100%;min-height:110px;font:12px monospace!important;resize:vertical}
+      .preview-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+      .preview-tools select{background:transparent;color:inherit;border:1px solid var(--line);border-radius:3px}
+      @media (max-width:900px){.assets-body{grid-template-columns:1fr}}
+      .app-credit{font-size:12px;color:var(--muted,#9aa3b5);white-space:nowrap;margin:0 10px}
+      .app-credit .credit-link{color:inherit;text-decoration:underline}
+      .credit-mobile{display:none;margin:4px 0 0}
+      @media (max-width:760px){.credit-desktop{display:none}.credit-mobile{display:block}}
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <nav class="tab-bar" role="tablist" aria-label="Editor views">
+        <button
+          class="tab-button"
+          id="blocklyTabButton"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="blocklyTab"
+          tabindex="0"
+        >
+          Blockly Creator
+        </button>
+        <button
+          class="tab-button"
+          id="htmlTabButton"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="htmlEditorTab"
+          tabindex="-1"
+        >
+          HTML Editor
+        </button>
+        <button class="tab-button" id="assetsTabButton" type="button" role="tab" aria-selected="false" aria-controls="assetsTab" tabindex="-1">Assets</button>
+        <span class="tab-spacer"></span>
+        <span class="app-credit credit-desktop">v1.0.0 · by <a class="credit-link" href="https://github.com/CipherG5G" target="_blank" rel="noopener noreferrer">CipherG5G</a></span>
+        <button
+          class="button theme-toggle"
+          id="themeToggleButton"
+          type="button"
+          aria-label="Switch to light theme"
+          title="Switch to light theme"
+        >
+          ☀
+        </button>
+      </nav>
+
+      <main id="blocklyTab" role="tabpanel" aria-labelledby="blocklyTabButton">
+        <section class="editor" aria-labelledby="editorTitle">
+          <div class="panel-heading">
+            <div class="heading-copy">
+              <h1 class="panel-title" id="editorTitle">Blocks</h1>
+              <p class="panel-description">
+                Start with the sample or build your own page.
+              </p>
+              <p class="app-credit credit-mobile">v1.0.0 · by <a class="credit-link" href="https://github.com/CipherG5G" target="_blank" rel="noopener noreferrer">CipherG5G</a></p>
+            </div>
+            <div class="heading-actions">
+              <button class="button" id="importButton" type="button" disabled>
+                Import
+              </button>
+              <button
+                class="button"
+                id="exportBlocklyButton"
+                type="button"
+                disabled
+              >
+                Export blocks
+              </button>
+              <button class="button" id="clearButton" type="button" disabled>
+                Clear
+              </button>
+              <button
+                class="button"
+                id="togglePreviewButton"
+                type="button"
+                aria-controls="previewPanel"
+                aria-expanded="true"
+              >
+                Hide preview
+              </button>
+              <button
+                class="button"
+                id="previewNewTabButton"
+                type="button"
+                disabled
+              >
+                Open preview in new tab
+              </button>
+              <button
+                class="button button-primary"
+                id="generateButton"
+                type="button"
+                disabled
+              >
+                <span aria-hidden="true">▶</span> Generate
+              </button>
+              <input
+                id="importFileInput"
+                type="file"
+                accept=".json,.xml,application/json,text/xml"
+                hidden
+              />
+            </div>
+          </div>
+          <div id="blocklyDiv" aria-label="Blockly workspace"></div>
+        </section>
+
+        <section
+          class="preview-panel"
+          id="previewPanel"
+          aria-labelledby="previewTitle"
+        >
+          <div class="panel-heading">
+            <div class="heading-copy">
+              <h2 class="panel-title" id="previewTitle">Page preview</h2>
+              <p class="panel-description">
+                Your generated website appears here.
+              </p>
+            </div>
+          </div>
+          <div class="preview-body">
+            <div class="preview-toolbar">
+              <div class="preview-label">
+                <span class="status-dot" id="statusDot"></span
+                ><span id="previewStatus">Waiting for blocks</span>
+              </div>
+              <span class="preview-tools">
+                <label>Device
+                  <select id="deviceSelect">
+                    <option value="fit">Fit</option><option value="375">Phone 375</option>
+                    <option value="768">Tablet 768</option><option value="1280">Laptop 1280</option>
+                  </select></label>
+                <label><input type="checkbox" id="autoRender" /> Auto-render</label>
+                <span>Sandboxed</span>
+              </span>
+            </div>
+            <div class="preview-frame-wrap">
+              <iframe
+                id="previewFrame"
+                title="Generated website preview"
+                sandbox="allow-scripts"
+              ></iframe>
+            </div>
+            <div class="console-panel">
+              <div class="console-heading">
+                <span class="code-title">Preview console</span>
+                <button class="button" id="clearConsoleButton" type="button">
+                  Clear
+                </button>
+              </div>
+              <div
+                class="console-output"
+                id="consoleOutput"
+                role="log"
+                aria-live="polite"
+                aria-label="Generated page console"
+              >
+                <div class="console-empty">Console output will appear here.</div>
+              </div>
+            </div>
+            <div class="code-panel">
+              <div class="code-heading">
+                <span class="code-title">Generated HTML</span>
+                <div class="heading-actions">
+                  <button
+                    class="button"
+                    id="exportHtmlButton"
+                    type="button"
+                    disabled
+                  >
+                    Export HTML
+                  </button>
+                  <button class="button" id="copyButton" type="button" disabled>
+                    Copy code
+                  </button>
+                </div>
+              </div>
+              <textarea
+                id="generatedCode"
+                aria-label="Generated HTML code"
+                readonly
+                spellcheck="false"
+                placeholder="Generate your page to see the HTML here."
+              ></textarea>
+              <div id="statusMessage" role="status" aria-live="polite">
+                Connect blocks, then select Generate.
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+      <section
+        class="html-editor-tab"
+        id="htmlEditorTab"
+        role="tabpanel"
+        aria-labelledby="htmlTabButton"
+        hidden
+      >
+        <div class="panel-heading">
+          <div class="heading-copy">
+            <h1 class="panel-title">Standalone HTML editor</h1>
+            <p class="panel-description">
+              Edit and export an HTML file independently from Blockly.
+            </p>
+          </div>
+          <div class="heading-actions">
+            <button class="button" id="openHtmlButton" type="button">
+              Open HTML file
+            </button>
+            <button
+              class="button button-primary"
+              id="exportStandaloneHtmlButton"
+              type="button"
+            >
+              Export HTML
+            </button>
+            <button
+              class="button"
+              id="previewStandaloneHtmlButton"
+              type="button"
+            >
+              Open preview in new tab
+            </button>
+            <input
+              id="htmlImportFileInput"
+              type="file"
+              accept=".html,.htm,text/html"
+              hidden
+            />
+          </div>
+        </div>
+        <textarea
+          id="standaloneHtmlEditor"
+          aria-label="Standalone HTML editor"
+          spellcheck="false"
+          placeholder="Write or open a standalone HTML file here. This editor does not change your Blockly workspace."
+        ></textarea>
+        <div id="htmlEditorStatus" role="status" aria-live="polite">
+          This HTML editor is independent of Blockly.
+        </div>
+      </section>
+      <section class="assets-tab" id="assetsTab" role="tabpanel" aria-labelledby="assetsTabButton" hidden>
+        <div class="panel-heading">
+          <div class="heading-copy">
+            <h1 class="panel-title">Assets and Base64</h1>
+            <p class="panel-description">Import images, sounds, video and fonts, then use them with the Asset blocks (Assets + Render category).</p>
+          </div>
+          <div class="heading-actions">
+            <button class="button button-primary" id="assetImportButton" type="button">Import assets</button>
+            <input id="assetFileInput" type="file" multiple accept="image/*,audio/*,video/*,.woff,.woff2,.ttf,.otf" hidden />
+          </div>
+        </div>
+        <div class="assets-body">
+          <div class="assets-card">
+            <div class="assets-drop" id="assetDrop">Drop files here or use Import assets</div>
+            <div id="assetList"></div>
+            <div class="panel-description" id="assetNote"></div>
+          </div>
+          <div class="assets-card">
+            <span class="code-title">Base64 converter</span>
+            <textarea class="b64-area" id="b64Input" spellcheck="false" aria-label="Input" placeholder="Paste text, base64 or a data: URI here"></textarea>
+            <div class="b64-actions">
+              <button class="button" id="b64Encode" type="button">Text to base64</button>
+              <button class="button" id="b64Decode" type="button">Base64 to text</button>
+              <button class="button" id="b64FileButton" type="button">File to data URI</button>
+              <input id="b64FileInput" type="file" hidden />
+              <label><input type="checkbox" id="b64UrlSafe" /> URL-safe</label>
+              <label><input type="checkbox" id="b64Raw" /> No data: prefix</label>
+            </div>
+            <textarea class="b64-area" id="b64Output" spellcheck="false" aria-label="Output" readonly placeholder="Result"></textarea>
+            <div class="b64-actions">
+              <button class="button" id="b64Copy" type="button">Copy result</button>
+              <button class="button" id="b64Swap" type="button">Use result as input</button>
+              <button class="button" id="b64AddAsset" type="button">Save input as asset</button>
+              <button class="button" id="b64Download" type="button">Download input as file</button>
+            </div>
+            <div class="panel-description" id="b64Status" role="status"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <dialog id="codeEditorDialog" aria-labelledby="codeEditorTitle">
+      <div class="code-editor-header">
+        <div>
+          <h2 class="code-editor-title" id="codeEditorTitle">
+            JavaScript editor
+          </h2>
+          <p class="code-editor-hint">
+            Syntax colors help you read and edit your code. Normal code snippets
+            are inserted exactly as written.
+          </p>
+        </div>
+      </div>
+      <div class="code-editor-content">
+        <textarea
+          id="plainCodeEditor"
+          aria-label="JavaScript code editor"
+          spellcheck="false"
+        ></textarea>
+      </div>
+      <div class="code-editor-footer">
+        <button class="button" id="cancelCodeButton" type="button">
+          Cancel
+        </button>
+        <button class="button button-primary" id="saveCodeButton" type="button">
+          Save code
+        </button>
+      </div>
+    </dialog>
+
+    <xml id="toolbox" style="display: none">
+      <category name="Page" colour="#4caf50">
+        <block type="html_page"></block>
+        <block type="html_head"></block>
+        <block type="html_body"></block>
+        <block type="html_title"></block>
+        <block type="html_section"></block>
+        <block type="html_div"></block>
+        <block type="html_structure"></block>
+        <block type="html_heading"></block>
+        <block type="html_paragraph"></block>
+        <block type="html_hr"></block>
+      </category>
+      <category name="Elements" colour="#2e7d32">
+        <block type="html_button"></block>
+        <block type="html_input"></block>
+        <block type="html_link"></block>
+        <block type="html_image"></block>
+        <block type="html_attributes"></block>
+      </category>
+      <category name="Head tags" colour="#2196f3">
+        <block type="html_style"></block>
+        <block type="html_meta"></block>
+        <block type="css_rule"></block>
+        <block type="css_responsive"></block>
+      </category>
+      <category name="JavaScript" colour="#f44336">
+        <block type="js_event"></block>
+        <block type="js_if">
+          <value name="CONDITION">
+            <block type="js_compare"></block>
+          </value>
+        </block>
+        <block type="js_loop"></block>
+        <block type="js_function"></block>
+        <block type="js_call_function_value"></block>
+      </category>
+      <category name="Variables" colour="#c62828">
+        <block type="js_variable"></block>
+        <block type="js_set_variable"></block>
+        <block type="js_value"></block>
+        <block type="js_to_number"></block>
+        <block type="js_to_string"></block>
+      </category>
+      <category name="DOM" colour="#8e24aa">
+        <block type="js_get_element"></block>
+        <block type="js_get_element_value"></block>
+        <block type="js_set_value">
+          <value name="ELEMENT">
+            <block type="js_get_element"></block>
+          </value>
+        </block>
+        <block type="js_set_text"></block>
+        <block type="js_visibility"></block>
+      </category>
+      <category name="Logic & Math" colour="#0097a7">
+        <block type="js_compare"></block>
+        <block type="js_and"></block>
+        <block type="js_or"></block>
+        <block type="js_not"></block>
+        <block type="js_nullish"></block>
+        <block type="js_ternary"></block>
+        <block type="js_math"><field name="OP">+</field></block>
+        <block type="js_step"><field name="OP">++</field></block>
+        <block type="js_assign_op"><field name="OP">+=</field></block>
+        <block type="js_math_fn"><field name="FN">sqrt</field></block>
+        <block type="js_pi"></block>
+        <block type="js_random"></block>
+        <block type="js_min"></block>
+        <block type="js_max"></block>
+      </category>
+      <category name="Utilities" colour="#546e7a">
+        <block type="js_console_log"></block>
+        <block type="js_return"></block>
+        <block type="js_do"></block>
+        <block type="js_storage_set"></block>
+        <block type="js_storage_get"></block>
+        <block type="js_storage_remove"></block>
+        <block type="js_storage_clear"></block>
+      </category>
+      <category name="Assets + Render" colour="#00897b">
+        <block type="asset_ref"></block>
+        <block type="html_audio"><value name="SRC"><block type="asset_ref"></block></value></block>
+        <block type="html_video"><value name="SRC"><block type="asset_ref"></block></value></block>
+        <block type="asset_play_sound"><value name="SRC"><block type="asset_ref"></block></value></block>
+        <block type="html_canvas"></block>
+        <block type="canvas_clear"></block>
+        <block type="canvas_rect"></block>
+        <block type="canvas_circle"></block>
+        <block type="canvas_text"></block>
+        <block type="canvas_image"><value name="SRC"><block type="asset_ref"></block></value></block>
+      </category>
+      <category name="Snippets" colour="#ff9800">
+        <block type="js_snippet"></block>
+        <block type="html_snippet"></block>
+        <block type="raw_code_snippet"></block>
+      </category>
+    </xml>
+
+    <script>
+      (() => {
+        const statusMessage = document.getElementById("statusMessage");
+        const generateButton = document.getElementById("generateButton");
+        const clearButton = document.getElementById("clearButton");
+        const copyButton = document.getElementById("copyButton");
+        const exportHtmlButton = document.getElementById("exportHtmlButton");
+        const previewNewTabButton = document.getElementById(
+          "previewNewTabButton",
+        );
+        const togglePreviewButton = document.getElementById(
+          "togglePreviewButton",
+        );
+        const main = document.querySelector("main");
+        const exportBlocklyButton = document.getElementById(
+          "exportBlocklyButton",
+        );
+        const importButton = document.getElementById("importButton");
+        const importFileInput = document.getElementById("importFileInput");
+        const generatedCode = document.getElementById("generatedCode");
+        const previewFrame = document.getElementById("previewFrame");
+        const previewStatus = document.getElementById("previewStatus");
+        const statusDot = document.getElementById("statusDot");
+        const consoleOutput = document.getElementById("consoleOutput");
+        const standaloneHtmlEditorElement = document.getElementById(
+          "standaloneHtmlEditor",
+        );
+        const htmlEditorStatus = document.getElementById("htmlEditorStatus");
+        const htmlImportFileInput =
+          document.getElementById("htmlImportFileInput");
+        const previewStandaloneHtmlButton = document.getElementById(
+          "previewStandaloneHtmlButton",
+        );
+        const themeToggleButton = document.getElementById("themeToggleButton");
+        const assetsTab = document.getElementById("assetsTab");
+        const assetsTabButton = document.getElementById("assetsTabButton");
+        let assets = [];
+        const blocklyTab = document.getElementById("blocklyTab");
+        const htmlEditorTab = document.getElementById("htmlEditorTab");
+        const blocklyTabButton = document.getElementById("blocklyTabButton");
+        const htmlTabButton = document.getElementById("htmlTabButton");
+        const previewUrls = new Set();
+        window.addEventListener("pagehide", () => {
+          previewUrls.forEach((url) => URL.revokeObjectURL(url));
+        });
+        const codeEditorDialog = document.getElementById("codeEditorDialog");
+        const plainCodeEditor = document.getElementById("plainCodeEditor");
+        let codeMirrorEditor = null;
+        let standaloneHtmlEditor = null;
+        let workspace = null;
+        let darkBlocklyTheme = null;
+        let lightBlocklyTheme = null;
+        let activeCodeField = null;
+        let generatedHtml = "";
+        let activePreviewToken = null;
+        let standaloneHtmlFilename = "page.html";
+        const standaloneHtmlCodeMirrorLimit = 250_000;
+
+        const openCodeEditor = (codeField, mode, title) => {
+          activeCodeField = codeField;
+          const currentCode = codeField.getValue() || "";
+          document.getElementById("codeEditorTitle").textContent = title;
+          if (window.CodeMirror) {
+            if (!codeMirrorEditor) {
+              codeMirrorEditor = CodeMirror.fromTextArea(plainCodeEditor, {
+                mode,
+                theme:
+                  document.documentElement.dataset.theme === "light"
+                    ? "default"
+                    : "dracula",
+                lineNumbers: true,
+                indentUnit: 2,
+                tabSize: 2,
+                lineWrapping: true,
+              });
+            }
+            codeMirrorEditor.setOption("mode", mode);
+            codeMirrorEditor.setValue(currentCode);
+          } else {
+            plainCodeEditor.value = currentCode;
+            setStatus(
+              "Syntax highlighting is unavailable; you can still edit this snippet as plain text.",
+              true,
+            );
+          }
+
+          codeEditorDialog.showModal();
+          if (codeMirrorEditor) {
+            codeMirrorEditor.refresh();
+          }
+          requestAnimationFrame(() => {
+            if (codeMirrorEditor) {
+              codeMirrorEditor.refresh();
+              codeMirrorEditor.focus();
+            } else {
+              plainCodeEditor.focus();
+            }
+          });
+        };
+
+        document
+          .getElementById("saveCodeButton")
+          .addEventListener("click", () => {
+            if (activeCodeField) {
+              activeCodeField.setValue(
+                codeMirrorEditor
+                  ? codeMirrorEditor.getValue()
+                  : plainCodeEditor.value,
+              );
+            }
+            activeCodeField = null;
+            codeEditorDialog.close();
+          });
+        document
+          .getElementById("cancelCodeButton")
+          .addEventListener("click", () => {
+            activeCodeField = null;
+            codeEditorDialog.close();
+          });
+        codeEditorDialog.addEventListener("cancel", () => {
+          activeCodeField = null;
+        });
+
+        const escapeText = (value) =>
+          value
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;");
+        const escapeAttribute = (value) =>
+          escapeText(value).replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+        const field = (block, name) =>
+          escapeText(block.getFieldValue(name) || "");
+        const attribute = (block, name) =>
+          escapeAttribute(block.getFieldValue(name) || "");
+        const assetData = (block) => {
+          const name = block.getFieldValue("ASSET");
+          const found = assets.find((a) => a.name === name);
+          if (!found) throw new Error(`Import the asset "${name}" in the Assets tab first.`);
+          return found.dataUrl;
+        };
+        const textOf = (block, name) => {
+          const child = block.getInputTargetBlock(name);
+          if (child && child.type === "asset_ref") return assetData(child);
+          return child && child.type === "js_value"
+            ? child.getFieldValue("VALUE") || ""
+            : "";
+        };
+        const isDynamic = (block, name) => {
+          const child = block.getInputTargetBlock(name);
+          return Boolean(child) && child.type !== "js_value" && child.type !== "asset_ref";
+        };
+        const txt = (block, name) => escapeText(textOf(block, name));
+        const attrTxt = (block, name) => escapeAttribute(textOf(block, name));
+
+        // Text slots that hold anything other than a plain js_value block are
+        // evaluated in the browser after the page loads ("bindings").
+        let bindings = [];
+        let bindingCount = 0;
+        const bindingMarkers = new Map();
+        const HTML_BINDINGS = {
+          html_title: [["TEXT", "title"]],
+          html_structure: [["TEXT", "prepend"]],
+          html_heading: [["TEXT", "text"]],
+          html_paragraph: [["TEXT", "text"]],
+          html_button: [["TEXT", "text"]],
+          html_input: [["PLACEHOLDER", "attr:placeholder"]],
+          html_link: [
+            ["TEXT", "text"],
+            ["URL", "attr:href"],
+          ],
+          html_image: [
+            ["URL", "attr:src"],
+            ["ALT", "attr:alt"],
+          ],
+          html_style: [["CODE", "text"]],
+          html_meta: [
+            ["NAME", "attr:name"],
+            ["CONTENT", "attr:content"],
+          ],
+        };
+        const ATTRIBUTE_BINDINGS = [
+          ["id", "ID"],
+          ["class", "CLASS"],
+          ["title", "TITLE"],
+          ["role", "ROLE"],
+          ["aria-label", "ARIA_LABEL"],
+        ];
+        const resetBindings = () => {
+          bindings = [];
+          bindingCount = 0;
+          bindingMarkers.clear();
+        };
+        const prepareBindings = (block) => {
+          const specs = [];
+          (HTML_BINDINGS[block.type] || []).forEach(([input, kind]) => {
+            if (isDynamic(block, input)) specs.push({ source: block, input, kind });
+          });
+          const attributeBlock = block.getInputTargetBlock("ATTRIBUTES");
+          if (attributeBlock) {
+            ATTRIBUTE_BINDINGS.forEach(([name, input]) => {
+              if (isDynamic(attributeBlock, input)) {
+                specs.push({ source: attributeBlock, input, kind: `attr:${name}` });
+              }
+            });
+            const dataName = textOf(attributeBlock, "DATA_NAME").trim();
+            if (dataName && isDynamic(attributeBlock, "DATA_VALUE")) {
+              specs.push({
+                source: attributeBlock,
+                input: "DATA_VALUE",
+                kind: `attr:data-${dataName}`,
+              });
+            }
+          }
+          if (!specs.length) return;
+          const id = ++bindingCount;
+          specs.forEach((spec) =>
+            bindings.push({
+              id,
+              kind: spec.kind,
+              expr: renderExpression(spec.source.getInputTargetBlock(spec.input)),
+            }),
+          );
+          if (specs.some((spec) => spec.kind !== "title")) {
+            bindingMarkers.set(block, id);
+          }
+        };
+        const renderBindings = () => {
+          if (!bindings.length) return "";
+          const lines = bindings.map((binding) => {
+            const value = `(${binding.expr}) ?? ""`;
+            if (binding.kind === "title") return `  document.title = ${value};`;
+            const target = `document.querySelector('[data-bind="${binding.id}"]')`;
+            let action;
+            if (binding.kind === "text") {
+              action = `el.textContent = ${value};`;
+            } else if (binding.kind === "prepend") {
+              action = `el.insertBefore(document.createTextNode(${value}), el.firstChild);`;
+            } else {
+              action = `el.setAttribute(${JSON.stringify(binding.kind.slice(5))}, ${value});`;
+            }
+            return `  { const el = ${target}; if (el) ${action} }`;
+          });
+          return renderScript(
+            `document.addEventListener("DOMContentLoaded", () => {\n${lines.join("\n")}\n});`,
+          );
+        };
+        const attributes = (block) => {
+          const attributeBlock = block.getInputTargetBlock("ATTRIBUTES");
+          let result = "";
+          if (attributeBlock) {
+            result = ATTRIBUTE_BINDINGS
+              .map(([name, fieldName]) => [name, textOf(attributeBlock, fieldName)])
+              .filter(([, value]) => value.trim())
+              .map(([name, value]) => ` ${name}="${escapeAttribute(value)}"`)
+              .join("");
+
+            if (isDynamic(attributeBlock, "DATA_NAME")) {
+              throw new Error(
+                "The custom data attribute name must be plain text from a JavaScript value block.",
+              );
+            }
+            const dataName = textOf(attributeBlock, "DATA_NAME").trim();
+            const dataValue = textOf(attributeBlock, "DATA_VALUE");
+            if (dataName) {
+              if (!/^[a-zA-Z][a-zA-Z0-9_.-]*$/.test(dataName)) {
+                throw new Error(
+                  "The custom data attribute name can only use letters, numbers, hyphens, underscores, and periods.",
+                );
+              }
+              result += ` data-${dataName}="${escapeAttribute(dataValue)}"`;
+            }
+          }
+          if (bindingMarkers.has(block)) {
+            result += ` data-bind="${bindingMarkers.get(block)}"`;
+          }
+          return result;
+        };
+        const statements = (block, name) =>
+          renderChain(block.getInputTargetBlock(name));
+        const isValidIdentifier = (name) =>
+          /^[A-Za-z_$][\w$]*$/.test(name) &&
+          !/^(await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|if|implements|import|in|instanceof|interface|let|new|null|package|private|protected|public|return|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield)$/.test(
+            name,
+          );
+        // Plain js_value text becomes a quoted string; any other value block is
+        // used as a JavaScript expression. Used for IDs and storage keys.
+        const textExpression = (block, name) => {
+          const child = block.getInputTargetBlock(name);
+          if (!child) return JSON.stringify("");
+          if (child.type === "js_value") {
+            return JSON.stringify(child.getFieldValue("VALUE") || "");
+          }
+          return renderExpression(child);
+        };
+        // Identifier slots (variable, function, parameter names) need plain text.
+        const identifierSlot = (block, name, kind, optional = false) => {
+          const child = block.getInputTargetBlock(name);
+          if (!child) {
+            if (optional) return "";
+            throw new Error(`Connect a JavaScript value block with the ${kind} name.`);
+          }
+          if (child.type !== "js_value") {
+            throw new Error(`The ${kind} name must be plain text from a JavaScript value block.`);
+          }
+          const value = (child.getFieldValue("VALUE") || "").trim();
+          if (!value && optional) return "";
+          if (!isValidIdentifier(value)) {
+            throw new Error(`"${value}" is not a valid JavaScript ${kind} name.`);
+          }
+          return value;
+        };
+        const optionalExpression = (block, name, fallback) => {
+          const child = block.getInputTargetBlock(name);
+          return child ? renderExpression(child) : fallback;
+        };
+        // Wrap loose JavaScript text in parentheses so it keeps its meaning when
+        // nested inside another operator, e.g. (-2) ** 2.
+        const operand = (block) => {
+          const code = renderExpression(block);
+          return block && block.type === "js_value" && !/^[\w$.]+$/.test(code)
+            ? `(${code})`
+            : code;
+        };
+        const assignmentTarget = (block) => {
+          const child = block.getInputTargetBlock("TARGET");
+          if (!child) throw new Error("Connect a variable to this block.");
+          if (child.type === "js_get_variable") return renderExpression(child);
+          if (child.type === "js_value") {
+            const text = (child.getFieldValue("VALUE") || "").trim();
+            if (!/^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*|\[[^\]]+\])*$/.test(text)) {
+              throw new Error(`"${text}" is not a variable that can be changed.`);
+            }
+            return text;
+          }
+          throw new Error("Use a variable or a JavaScript value block as the target.");
+        };
+        const insideFunction = (block) => {
+          for (let parent = block.getSurroundParent(); parent; parent = parent.getSurroundParent()) {
+            if (parent.type === "js_function" || parent.type === "js_event") return true;
+          }
+          return false;
+        };
+        const canvasCode = (block, body) =>
+          `{ const canvas = document.getElementById(${textExpression(block, "ID")}); const ctx = canvas && canvas.getContext("2d"); if (ctx) { ${body} } }`;
+        const slotExpr = (block, name) => renderExpression(block.getInputTargetBlock(name));
+        const renderExpression = (block) => {
+          if (!block) {
+            throw new Error("Connect a value block to this input.");
+          }
+          switch (block.type) {
+            case "js_get_variable":
+              return identifierSlot(block, "NAME", "variable");
+            case "js_value":
+              return (block.getFieldValue("VALUE") || "").trim() || "undefined";
+            case "js_compare":
+              return `(${operand(block.getInputTargetBlock("LEFT"))} ${block.getFieldValue("OPERATOR")} ${operand(block.getInputTargetBlock("RIGHT"))})`;
+            case "js_and":
+              return `(${operand(block.getInputTargetBlock("A"))} && ${operand(block.getInputTargetBlock("B"))})`;
+            case "js_or":
+              return `(${operand(block.getInputTargetBlock("A"))} || ${operand(block.getInputTargetBlock("B"))})`;
+            case "js_not":
+              return `(!${operand(block.getInputTargetBlock("A"))})`;
+            case "js_nullish":
+              return `(${operand(block.getInputTargetBlock("VALUE"))} ${block.getFieldValue("MODE")} null)`;
+            case "js_ternary":
+              return `(${operand(block.getInputTargetBlock("COND"))} ? ${renderExpression(block.getInputTargetBlock("THEN"))} : ${renderExpression(block.getInputTargetBlock("ELSE"))})`;
+            case "js_math":
+              return `(${operand(block.getInputTargetBlock("A"))} ${block.getFieldValue("OP")} ${operand(block.getInputTargetBlock("B"))})`;
+            case "js_step":
+              return `(${assignmentTarget(block)}${block.getFieldValue("OP")})`;
+            case "js_assign_op":
+              return `(${assignmentTarget(block)} ${block.getFieldValue("OP")} ${renderExpression(block.getInputTargetBlock("VALUE"))})`;
+            case "js_math_fn":
+              return `Math.${block.getFieldValue("FN")}(${renderExpression(block.getInputTargetBlock("VALUE"))})`;
+            case "js_pi":
+              return "Math.PI";
+            case "js_random":
+              return "Math.random()";
+            case "js_min":
+              return `Math.min(${renderExpression(block.getInputTargetBlock("A"))}, ${renderExpression(block.getInputTargetBlock("B"))})`;
+            case "js_max":
+              return `Math.max(${renderExpression(block.getInputTargetBlock("A"))}, ${renderExpression(block.getInputTargetBlock("B"))})`;
+            case "js_to_number":
+              return `Number(${renderExpression(block.getInputTargetBlock("VALUE"))})`;
+            case "js_to_string":
+              return `String(${renderExpression(block.getInputTargetBlock("VALUE"))})`;
+            case "asset_ref":
+              return JSON.stringify(assetData(block));
+            case "js_get_element":
+              return `document.getElementById(${textExpression(block, "ID")})`;
+            case "js_get_element_value":
+              return `document.getElementById(${textExpression(block, "ID")})?.value`;
+            case "js_storage_get":
+              return `localStorage.getItem(${textExpression(block, "KEY")})`;
+            case "js_call_function_value":
+              return `${identifierSlot(block, "NAME", "function")}(${optionalExpression(block, "ARGUMENT", "")})`;
+            default:
+              throw new Error(`"${block.type}" is not a JavaScript value block.`);
+          }
+        };
+        const renderVariable = (block) => {
+          const name = identifierSlot(block, "NAME", "variable");
+          const value = optionalExpression(block, "VALUE", "undefined");
+          return `let ${name} = ${value};`;
+        };
+        const indentLines = (code) =>
+          code
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => `  ${line}`)
+            .join("\n");
+        const renderJavaScriptAction = (block) => {
+          switch (block.type) {
+            case "js_variable":
+              return renderVariable(block);
+            case "js_set_variable": {
+              const name = identifierSlot(block, "NAME", "variable");
+              return `${name} = ${renderExpression(block.getInputTargetBlock("VALUE"))};`;
+            }
+            case "js_set_text": {
+              const id = textExpression(block, "ID");
+              const text = renderExpression(block.getInputTargetBlock("VALUE"));
+              return `{ const target = document.getElementById(${id}); if (target) target.textContent = ${text}; }\n`;
+            }
+            case "js_set_value": {
+              const element = renderExpression(block.getInputTargetBlock("ELEMENT"));
+              const value = renderExpression(block.getInputTargetBlock("VALUE"));
+              return `{ const inputElement = ${element}; if (inputElement) inputElement.value = ${value}; }\n`;
+            }
+            case "js_visibility": {
+              const id = textExpression(block, "ID");
+              const action = block.getFieldValue("ACTION");
+              const update = action === "show"
+                ? "target.hidden = false;"
+                : action === "hide"
+                  ? "target.hidden = true;"
+                  : "target.hidden = !target.hidden;";
+              return `{ const target = document.getElementById(${id}); if (target) ${update} }\n`;
+            }
+            case "js_if": {
+              const condition = renderExpression(block.getInputTargetBlock("CONDITION"));
+              const body = renderJavaScriptChain(block.getInputTargetBlock("DO"));
+              const otherwise = renderJavaScriptChain(block.getInputTargetBlock("ELSE"));
+              return `if (${condition}) {\n${indentLines(body)}\n}${otherwise.trim() ? ` else {\n${indentLines(otherwise)}\n}` : ""}`;
+            }
+            case "js_loop": {
+              const variable = identifierSlot(block, "NAME", "loop variable");
+              const start = optionalExpression(block, "START", "0");
+              const end = optionalExpression(block, "END", "0");
+              const body = renderJavaScriptChain(block.getInputTargetBlock("DO"));
+              return `for (let ${variable} = ${start}; ${variable} < ${end}; ${variable}++) {\n${indentLines(body)}\n}`;
+            }
+            case "js_function": {
+              const name = identifierSlot(block, "NAME", "function");
+              const parameter = identifierSlot(block, "PARAMETER", "parameter", true);
+              const body = renderJavaScriptChain(block.getInputTargetBlock("DO"));
+              return `function ${name}(${parameter}) {\n${indentLines(body)}\n}`;
+            }
+            case "js_call_function": {
+              const name = identifierSlot(block, "NAME", "function");
+              return `${name}(${optionalExpression(block, "ARGUMENT", "")});`;
+            }
+            case "js_do":
+              return `${renderExpression(block.getInputTargetBlock("VALUE"))};`;
+            case "js_console_log":
+              return `console.log(${optionalExpression(block, "VALUE", "")});`;
+            case "js_return": {
+              if (!insideFunction(block)) {
+                throw new Error(
+                  "The return block only works inside a function or an event block.",
+                );
+              }
+              const child = block.getInputTargetBlock("VALUE");
+              return child ? `return ${renderExpression(child)};` : "return;";
+            }
+            case "js_storage_set":
+              return `localStorage.setItem(${textExpression(block, "KEY")}, ${renderExpression(block.getInputTargetBlock("VALUE"))});`;
+            case "js_storage_remove":
+              return `localStorage.removeItem(${textExpression(block, "KEY")});`;
+            case "js_storage_clear":
+              return "localStorage.clear();";
+            case "asset_play_sound":
+              return `new Audio(${slotExpr(block, "SRC")}).play();`;
+            case "canvas_clear":
+              return canvasCode(block, "ctx.clearRect(0, 0, canvas.width, canvas.height);");
+            case "canvas_rect":
+              return canvasCode(block, `ctx.fillStyle = ${slotExpr(block, "COLOR")}; ctx.fillRect(${slotExpr(block, "X")}, ${slotExpr(block, "Y")}, ${slotExpr(block, "W")}, ${slotExpr(block, "H")});`);
+            case "canvas_circle":
+              return canvasCode(block, `ctx.fillStyle = ${slotExpr(block, "COLOR")}; ctx.beginPath(); ctx.arc(${slotExpr(block, "X")}, ${slotExpr(block, "Y")}, ${slotExpr(block, "R")}, 0, Math.PI * 2); ctx.fill();`);
+            case "canvas_text":
+              return canvasCode(block, `ctx.fillStyle = ${slotExpr(block, "COLOR")}; ctx.font = ${slotExpr(block, "FONT")}; ctx.fillText(${slotExpr(block, "TEXT")}, ${slotExpr(block, "X")}, ${slotExpr(block, "Y")});`);
+            case "canvas_image":
+              return canvasCode(block, `const img = new Image(); img.onload = () => ctx.drawImage(img, ${slotExpr(block, "X")}, ${slotExpr(block, "Y")}, ${slotExpr(block, "W")}, ${slotExpr(block, "H")}); img.src = ${slotExpr(block, "SRC")};`);
+            case "js_snippet":
+              return block.getFieldValue("CODE") || "";
+            default:
+              throw new Error(
+                `"${block.type}" cannot be used as a JavaScript action.`,
+              );
+          }
+        };
+        const renderJavaScriptChain = (block) => {
+          let code = "";
+          for (let current = block; current; current = current.getNextBlock()) {
+            code += renderJavaScriptAction(current) + "\n";
+          }
+          return code;
+        };
+        const renderScript = (code) =>
+          "<script>\n" +
+          code.replace(/<\/script/gi, "<\\/script") +
+          "\n</scr" +
+          "ipt>\n";
+        const renderChain = (block) => {
+          let html = "";
+          for (let current = block; current; current = current.getNextBlock()) {
+            html += renderBlock(current);
+          }
+          return html;
+        };
+        const cssSlotExpression = (block, name, fallback) => {
+          const child = block.getInputTargetBlock(name);
+          if (!child) return JSON.stringify(fallback);
+          if (child.type === "js_value") {
+            return JSON.stringify((child.getFieldValue("VALUE") || "").trim() || fallback);
+          }
+          return renderExpression(child);
+        };
+        const renderBlock = (block) => {
+          if (block.type === "html_page") resetBindings();
+          prepareBindings(block);
+          switch (block.type) {
+            case "html_page": {
+              const headBlock = block.getInputTargetBlock("HEAD");
+              const headContents =
+                headBlock?.type === "html_head"
+                ? statements(headBlock, "CHILDREN") +
+                  renderChain(headBlock.getNextBlock())
+                : renderChain(headBlock);
+              const bodyContents = renderChain(block.getInputTargetBlock("BODY"));
+              return (
+                '<!doctype html>\n<html lang="en"' +
+                attributes(block) +
+                ">\n" +
+                "<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+                headContents +
+                "</head>\n" +
+                bodyContents +
+                renderBindings() +
+                "</html>\n"
+              );
+            }
+            case "html_head":
+              return (
+                "<head" +
+                attributes(block) +
+                ">\n" +
+                statements(block, "CHILDREN") +
+                "</head>\n"
+              );
+            case "html_body":
+              return (
+                "<body" +
+                attributes(block) +
+                ">\n" +
+                statements(block, "CHILDREN") +
+                "</body>\n"
+              );
+            case "html_title":
+              return (
+                "<title" +
+                attributes(block) +
+                ">" +
+                txt(block, "TEXT") +
+                "</title>\n"
+              );
+            case "html_section":
+              return (
+                "<section" +
+                attributes(block) +
+                ">\n" +
+                statements(block, "CHILDREN") +
+                "</section>\n"
+              );
+            case "html_div":
+              return (
+                "<div" +
+                attributes(block) +
+                ">\n" +
+                statements(block, "CHILDREN") +
+                "</div>\n"
+              );
+            case "html_structure": {
+              const tag = block.getFieldValue("TAG");
+              return (
+                `<${tag}${attributes(block)}>` +
+                txt(block, "TEXT") +
+                "\n" +
+                statements(block, "CHILDREN") +
+                `</${tag}>\n`
+              );
+            }
+            case "html_heading": {
+              const tag = block.getFieldValue("LEVEL");
+              return `<${tag}${attributes(block)}>${txt(block, "TEXT")}</${tag}>\n`;
+            }
+            case "html_paragraph":
+              return (
+                "<p" + attributes(block) + ">" + txt(block, "TEXT") + "</p>\n"
+              );
+            case "html_button":
+              return (
+                '<button type="button"' +
+                attributes(block) +
+                ">" +
+                txt(block, "TEXT") +
+                "</button>\n"
+              );
+            case "html_input":
+              return `<input type="${attribute(block, "TYPE")}" placeholder="${attrTxt(block, "PLACEHOLDER")}"${attributes(block)}>\n`;
+            case "html_link":
+              return `<a href="${attrTxt(block, "URL")}"${attributes(block)}>${txt(block, "TEXT")}</a>\n`;
+            case "html_audio":
+              return `<audio src="${attrTxt(block, "SRC")}" controls${attributes(block)}></audio>\n`;
+            case "html_video":
+              return `<video src="${attrTxt(block, "SRC")}" controls playsinline style="max-width:100%"${attributes(block)}></video>\n`;
+            case "html_canvas":
+              return `<canvas id="${attrTxt(block, "ID")}" width="${Number(block.getFieldValue("W")) || 400}" height="${Number(block.getFieldValue("H")) || 240}"${attributes(block)}></canvas>\n`;
+            case "html_image":
+              return `<img src="${attrTxt(block, "URL")}" alt="${attrTxt(block, "ALT")}"${attributes(block)}>\n`;
+            case "html_hr":
+              return "<hr" + attributes(block) + ">\n";
+            case "html_style":
+              return (
+                "<style" +
+                attributes(block) +
+                ">\n" +
+                textOf(block, "CODE") +
+                "\n</style>\n"
+              );
+            case "html_script":
+              return (
+                "<script" +
+                attributes(block) +
+                ">\n" +
+                block.getFieldValue("CODE") +
+                "\n</scr" +
+                "ipt>\n"
+              );
+            case "html_meta":
+              return `<meta name="${attrTxt(block, "NAME")}" content="${attrTxt(block, "CONTENT")}"${attributes(block)}>\n`;
+            case "css_rule": {
+              const property = block.getFieldValue("PROPERTY");
+              if (isDynamic(block, "SELECTOR") || isDynamic(block, "VALUE")) {
+                const selector = cssSlotExpression(block, "SELECTOR", "*");
+                const value = cssSlotExpression(block, "VALUE", "");
+                return renderScript(
+                  `document.addEventListener("DOMContentLoaded", () => {\n  document.querySelectorAll(String(${selector})).forEach((el) => el.style.setProperty(${JSON.stringify(property)}, String(${value})));\n});`,
+                );
+              }
+              const selector = textOf(block, "SELECTOR").trim() || "*";
+              const value = textOf(block, "VALUE");
+              return `<style>\n${selector} {\n  ${property}: ${value};\n}\n</style>\n`;
+            }
+            case "css_responsive": {
+              const property = block.getFieldValue("PROPERTY");
+              const maxWidth = block.getFieldValue("BREAKPOINT");
+              if (isDynamic(block, "SELECTOR") || isDynamic(block, "VALUE")) {
+                const selector = cssSlotExpression(block, "SELECTOR", "*");
+                const value = cssSlotExpression(block, "VALUE", "");
+                return renderScript(
+                  `document.addEventListener("DOMContentLoaded", () => {\n  const query = window.matchMedia("(max-width: ${maxWidth}px)");\n  const apply = () => document.querySelectorAll(String(${selector})).forEach((el) => {\n    if (query.matches) el.style.setProperty(${JSON.stringify(property)}, String(${value}));\n    else el.style.removeProperty(${JSON.stringify(property)});\n  });\n  apply();\n  query.addEventListener("change", apply);\n});`,
+                );
+              }
+              const selector = textOf(block, "SELECTOR").trim() || "*";
+              const value = textOf(block, "VALUE");
+              return `<style>\n@media (max-width: ${maxWidth}px) {\n  ${selector} {\n    ${property}: ${value};\n  }\n}\n</style>\n`;
+            }
+            case "js_event": {
+              const id = textExpression(block, "ID");
+              const eventName = block.getFieldValue("EVENT");
+              const actions = renderJavaScriptChain(
+                block.getInputTargetBlock("ACTIONS"),
+              );
+              const preventDefault = eventName === "submit" ? "    event.preventDefault();\n" : "";
+              const code = `document.addEventListener("DOMContentLoaded", () => {\n  const target = document.getElementById(${id});\n  if (target) target.addEventListener(${JSON.stringify(eventName)}, function (event) {\n${preventDefault}${actions
+                .split("\n")
+                .filter(Boolean)
+                .map((line) => "    " + line)
+                .join("\n")}\n  });\n});`;
+              return renderScript(code);
+            }
+            case "js_variable":
+              return renderScript(renderVariable(block));
+            case "js_set_variable":
+            case "js_if":
+            case "js_loop":
+            case "js_function":
+            case "js_call_function":
+            case "js_do":
+            case "js_console_log":
+            case "js_return":
+            case "js_storage_set":
+            case "js_storage_remove":
+            case "js_storage_clear":
+            case "asset_play_sound":
+              return renderScript(renderJavaScriptAction(block));
+            case "js_set_text":
+            case "js_set_value":
+            case "js_visibility":
+            case "canvas_clear":
+            case "canvas_rect":
+            case "canvas_circle":
+            case "canvas_text":
+            case "canvas_image": {
+              const action = renderJavaScriptAction(block);
+              return renderScript(
+                `document.addEventListener("DOMContentLoaded", () => {\n  ${action.trim()}\n});`,
+              );
+            }
+            case "js_snippet":
+              return renderScript(block.getFieldValue("CODE") || "");
+            case "html_snippet":
+            case "raw_code_snippet":
+              return block.getFieldValue("CODE") || "";
+            default:
+              throw new Error(
+                `No HTML generator is registered for block "${block.type}".`,
+              );
+          }
+        };
+
+        const textField = (value) => new Blockly.FieldTextInput(value);
+        class CodeSnippetField extends Blockly.FieldTextInput {
+          constructor(value, mode, title) {
+            super(value);
+            this.mode_ = mode;
+            this.title_ = title;
+          }
+
+          showEditor_() {
+            openCodeEditor(this, this.mode_, this.title_);
+          }
+        }
+        const addAttributesInput = (block) =>
+          block
+            .appendValueInput("ATTRIBUTES")
+            .setCheck("html_attributes")
+            .appendField("attributes");
+        const valueSlot = (block, name, label) => {
+          const input = block.appendValueInput(name).setCheck("js_expression");
+          if (label) input.appendField(label);
+          return input;
+        };
+        const statementBlock = (
+          label,
+          colour,
+          previous = true,
+          next = true,
+        ) => ({
+          init() {
+            this.appendDummyInput().appendField(label);
+            addAttributesInput(this);
+            if (previous) this.setPreviousStatement(true);
+            if (next) this.setNextStatement(true);
+            this.setColour(colour);
+            this.setTooltip(label);
+          },
+        });
+        const containerBlock = (
+          label,
+          colour,
+          previous = true,
+          next = true,
+        ) => ({
+          init() {
+            this.appendDummyInput().appendField(label);
+            addAttributesInput(this);
+            this.appendStatementInput("CHILDREN").appendField("do");
+            if (previous) this.setPreviousStatement(true);
+            if (next) this.setNextStatement(true);
+            this.setColour(colour);
+            this.setTooltip(label);
+          },
+        });
+
+        Blockly.Blocks.html_page = {
+          init() {
+            this.appendDummyInput().appendField("HTML page");
+            addAttributesInput(this);
+            this.appendStatementInput("HEAD").appendField("head");
+            this.appendStatementInput("BODY").appendField("body");
+            this.setColour("#4caf50");
+            this.setTooltip("The root of your generated HTML document.");
+          },
+        };
+        Blockly.Blocks.html_head = containerBlock(
+          "head",
+          "#4caf50",
+          true,
+          false,
+        );
+        Blockly.Blocks.html_body = containerBlock(
+          "body",
+          "#4caf50",
+          true,
+          false,
+        );
+        Blockly.Blocks.html_section = containerBlock("section", "#4caf50");
+        Blockly.Blocks.html_div = containerBlock("div", "#4caf50");
+        Blockly.Blocks.html_structure = {
+          init() {
+            this.appendDummyInput()
+              .appendField("HTML structure")
+              .appendField(
+                new Blockly.FieldDropdown([
+                  ["header", "header"],
+                  ["navigation", "nav"],
+                  ["main", "main"],
+                  ["footer", "footer"],
+                  ["article", "article"],
+                  ["aside", "aside"],
+                  ["unordered list", "ul"],
+                  ["ordered list", "ol"],
+                  ["list item", "li"],
+                  ["form", "form"],
+                  ["label", "label"],
+                  ["fieldset", "fieldset"],
+                  ["legend", "legend"],
+                  ["select", "select"],
+                  ["option", "option"],
+                  ["table", "table"],
+                  ["table head", "thead"],
+                  ["table body", "tbody"],
+                  ["table row", "tr"],
+                  ["table header cell", "th"],
+                  ["table cell", "td"],
+                ]),
+                "TAG",
+              );
+            valueSlot(this, "TEXT", "text");
+            addAttributesInput(this);
+            this.appendStatementInput("CHILDREN").appendField("contains");
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip(
+              "Choose a semantic layout, form, list, or table element.",
+            );
+          },
+        };
+        Blockly.Blocks.html_title = {
+          init() {
+            valueSlot(this, "TEXT", "page title");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip("Set the text shown in the browser tab.");
+          },
+        };
+        Blockly.Blocks.html_heading = {
+          init() {
+            this.appendDummyInput()
+              .appendField("heading")
+              .appendField(
+                new Blockly.FieldDropdown([
+                  ["H1", "h1"],
+                  ["H2", "h2"],
+                  ["H3", "h3"],
+                  ["H4", "h4"],
+                  ["H5", "h5"],
+                  ["H6", "h6"],
+                ]),
+                "LEVEL",
+              );
+            valueSlot(this, "TEXT", "text");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip("Add a heading to the page.");
+          },
+        };
+        Blockly.Blocks.html_paragraph = {
+          init() {
+            valueSlot(this, "TEXT", "paragraph");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip("Add a paragraph of text.");
+          },
+        };
+        Blockly.Blocks.html_button = {
+          init() {
+            valueSlot(this, "TEXT", "button");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip("Add a button.");
+          },
+        };
+        Blockly.Blocks.html_input = {
+          init() {
+            this.appendDummyInput()
+              .appendField("input")
+              .appendField(
+                new Blockly.FieldDropdown([
+                  ["text", "text"],
+                  ["date", "date"],
+                  ["color", "color"],
+                  ["email", "email"],
+                  ["number", "number"],
+                  ["password", "password"],
+                  ["telephone", "tel"],
+                  ["URL", "url"],
+                  ["checkbox", "checkbox"],
+                  ["radio", "radio"],
+                  ["submit", "submit"],
+                ]),
+                "TYPE",
+              );
+            valueSlot(this, "PLACEHOLDER", "placeholder");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip("Add a text, date, color, email, or number input.");
+          },
+        };
+        Blockly.Blocks.html_link = {
+          init() {
+            valueSlot(this, "TEXT", "link text");
+            valueSlot(this, "URL", "URL");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip("Add a link.");
+          },
+        };
+        Blockly.Blocks.html_image = {
+          init() {
+            valueSlot(this, "URL", "image URL");
+            valueSlot(this, "ALT", "alt text");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip("Add an image with descriptive alternative text.");
+          },
+        };
+        Blockly.Blocks.html_hr = statementBlock("horizontal rule", "#4caf50");
+        Blockly.Blocks.html_style = {
+          init() {
+            valueSlot(this, "CODE", "style (CSS)");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#2196f3");
+            this.setTooltip("Add CSS inside the document head.");
+          },
+        };
+        Blockly.Blocks.html_script = {
+          init() {
+            this.appendDummyInput().appendField("script (JavaScript)");
+            this.appendDummyInput().appendField(
+              new CodeSnippetField(
+                "// Your JavaScript",
+                "javascript",
+                "JavaScript editor",
+              ),
+              "CODE",
+            );
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip("Add JavaScript inside the document head.");
+          },
+        };
+        Blockly.Blocks.html_meta = {
+          init() {
+            valueSlot(this, "NAME", "meta name");
+            valueSlot(this, "CONTENT", "content");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#4caf50");
+            this.setTooltip("Add a metadata tag to the document head.");
+          },
+        };
+        const cssProperties = [
+          ["text color", "color"],
+          ["background color", "background-color"],
+          ["font size", "font-size"],
+          ["font weight", "font-weight"],
+          ["text alignment", "text-align"],
+          ["width", "width"],
+          ["maximum width", "max-width"],
+          ["height", "height"],
+          ["padding", "padding"],
+          ["margin", "margin"],
+          ["display", "display"],
+          ["gap", "gap"],
+          ["border", "border"],
+          ["border radius", "border-radius"],
+          ["box shadow", "box-shadow"],
+          ["grid columns", "grid-template-columns"],
+        ];
+        Blockly.Blocks.css_rule = {
+          init() {
+            valueSlot(this, "SELECTOR", "style selector");
+            valueSlot(this, "VALUE", "set").appendField(
+              new Blockly.FieldDropdown(cssProperties),
+              "PROPERTY",
+            ).appendField("to");
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#2196f3");
+            this.setTooltip(
+              "Set a CSS property for a selector. Values can include units such as px or rem.",
+            );
+          },
+        };
+        Blockly.Blocks.css_responsive = {
+          init() {
+            this.appendDummyInput()
+              .appendField("on screens narrower than")
+              .appendField(
+                new Blockly.FieldDropdown([
+                  ["480", "480"],
+                  ["600", "600"],
+                  ["768", "768"],
+                  ["1024", "1024"],
+                ]),
+                "BREAKPOINT",
+              )
+              .appendField("px");
+            valueSlot(this, "SELECTOR", "style selector");
+            valueSlot(this, "VALUE", "set").appendField(
+              new Blockly.FieldDropdown(cssProperties),
+              "PROPERTY",
+            ).appendField("to");
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#2196f3");
+            this.setTooltip(
+              "Apply a CSS property only on screens narrower than the selected breakpoint.",
+            );
+          },
+        };
+        Blockly.Blocks.html_attributes = {
+          init() {
+            valueSlot(this, "ID", "id");
+            valueSlot(this, "CLASS", "class");
+            valueSlot(this, "TITLE", "title");
+            valueSlot(this, "ROLE", "role");
+            valueSlot(this, "ARIA_LABEL", "aria-label");
+            valueSlot(this, "DATA_NAME", "data-");
+            valueSlot(this, "DATA_VALUE", "data value");
+            this.setOutput(true, "html_attributes");
+            this.setColour("#2e7d32");
+            this.setTooltip(
+              "Attach ID, class, title, role, accessibility, or data attributes to an HTML element.",
+            );
+          },
+        };
+        Blockly.Blocks.js_event = {
+          init() {
+            valueSlot(this, "ID", "when element ID");
+            this.appendDummyInput()
+              .appendField("event")
+              .appendField(
+                new Blockly.FieldDropdown([
+                  ["click", "click"],
+                  ["input", "input"],
+                  ["change", "change"],
+                  ["submit", "submit"],
+                  ["keydown", "keydown"],
+                  ["keyup", "keyup"],
+                  ["focus", "focus"],
+                  ["blur", "blur"],
+                  ["mouseover", "mouseover"],
+                  ["mouseout", "mouseout"],
+                ]),
+                "EVENT",
+              );
+            this.appendStatementInput("ACTIONS").appendField("do");
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip(
+              "Run the connected JavaScript actions when this element fires an event.",
+            );
+          },
+        };
+        Blockly.Blocks.js_set_text = {
+          init() {
+            valueSlot(this, "ID", "change text of element ID");
+            valueSlot(this, "VALUE", "to");
+            this.setInputsInline(true);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip(
+              "Set an element's text. Type JavaScript in the value, e.g. \"Hello\" (with quotes) or connect a variable or expression.",
+            );
+          },
+        };
+        Blockly.Blocks.js_visibility = {
+          init() {
+            valueSlot(this, "ID", "set visibility of element ID");
+            this.appendDummyInput()
+              .appendField("to")
+              .appendField(
+                new Blockly.FieldDropdown([
+                  ["show", "show"],
+                  ["hide", "hide"],
+                  ["toggle", "toggle"],
+                ]),
+                "ACTION",
+              );
+            this.setInputsInline(true);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip(
+              "Show, hide, or toggle an element by its ID. Hidden elements can be shown again with this block.",
+            );
+          },
+        };
+        Blockly.Blocks.js_variable = {
+          init() {
+            valueSlot(this, "NAME", "let variable");
+            valueSlot(this, "VALUE", "value");
+            this.setInputsInline(true);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip(
+              "Create a variable. Type a JavaScript value (42, true, \"hello\") or connect any value block.",
+            );
+          },
+        };
+        Blockly.Blocks.js_get_variable = {
+          init() {
+            valueSlot(this, "NAME", "get variable");
+            this.setInputsInline(true);
+            this.setOutput(true, "js_expression");
+            this.setColour("#c62828");
+            this.setTooltip("Get a JavaScript variable's current value.");
+          },
+        };
+        Blockly.Blocks.js_value = {
+          init() {
+            this.appendDummyInput().appendField(textField("0"), "VALUE");
+            this.setOutput(true, "js_expression");
+            this.setColour("#c62828");
+            this.setTooltip(
+              "Plain text for HTML, names, IDs, and keys. In JavaScript value slots, type JavaScript as written (42, true, \"hello\") - no quotes are added automatically. You can drag it out, delete it, or replace it with any other value block.",
+            );
+          },
+        };
+        Blockly.Blocks.js_compare = {
+          init() {
+            this.appendValueInput("LEFT")
+              .setCheck("js_expression")
+              .appendField("compare");
+            this.appendDummyInput().appendField(
+              new Blockly.FieldDropdown([
+                ["equals", "==="],
+                ["does not equal", "!=="],
+                ["is greater than", ">"],
+                ["is less than", "<"],
+                ["is at least", ">="],
+                ["is at most", "<="],
+              ]),
+              "OPERATOR",
+            );
+            this.appendValueInput("RIGHT").setCheck("js_expression");
+            this.setInputsInline(true);
+            this.setOutput(true, "js_expression");
+            this.setColour("#c62828");
+            this.setTooltip(
+              "Compare two JavaScript values. Equality uses strict comparison.",
+            );
+          },
+        };
+        Blockly.Blocks.js_set_variable = {
+          init() {
+            valueSlot(this, "NAME", "set variable");
+            valueSlot(this, "VALUE", "to");
+            this.setInputsInline(true);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip("Assign a new JavaScript value to an existing variable.");
+          },
+        };
+        Blockly.Blocks.js_if = {
+          init() {
+            this.appendValueInput("CONDITION")
+              .setCheck("js_expression")
+              .appendField("if");
+            this.appendStatementInput("DO").appendField("do");
+            this.appendStatementInput("ELSE").appendField("otherwise");
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip(
+              "Run one set of blocks when the condition is true, and optionally another when it is false.",
+            );
+          },
+        };
+        Blockly.Blocks.js_loop = {
+          init() {
+            valueSlot(this, "NAME", "repeat with");
+            valueSlot(this, "START", "from");
+            valueSlot(this, "END", "to before");
+            this.setInputsInline(true);
+            this.appendStatementInput("DO").appendField("do");
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip(
+              "Repeat the connected blocks from the start value up to, but not including, the end value.",
+            );
+          },
+        };
+        Blockly.Blocks.js_function = {
+          init() {
+            valueSlot(this, "NAME", "define function");
+            valueSlot(this, "PARAMETER", "parameter (optional)");
+            this.setInputsInline(true);
+            this.appendStatementInput("DO").appendField("do");
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip(
+              "Define a reusable JavaScript function with an optional parameter. Use a return block to send a value back.",
+            );
+          },
+        };
+        Blockly.Blocks.js_call_function = {
+          init() {
+            valueSlot(this, "NAME", "call function");
+            valueSlot(this, "ARGUMENT", "with argument (optional)");
+            this.setInputsInline(true);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#f44336");
+            this.setTooltip("Call a previously defined function.");
+          },
+        };
+        Blockly.Blocks.js_snippet = {
+          init() {
+            this.appendDummyInput().appendField("JavaScript snippet");
+            this.appendDummyInput().appendField(
+              new CodeSnippetField(
+                "// Write JavaScript here",
+                "javascript",
+                "JavaScript editor",
+              ),
+              "CODE",
+            );
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#ff9800");
+            this.setTooltip(
+              "Write a JavaScript snippet to include in the generated page.",
+            );
+          },
+        };
+        Blockly.Blocks.html_snippet = {
+          init() {
+            this.appendDummyInput().appendField("HTML snippet");
+            this.appendDummyInput().appendField(
+              new CodeSnippetField(
+                "<div>Write HTML here</div>",
+                "xml",
+                "HTML editor",
+              ),
+              "CODE",
+            );
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#26a69a");
+            this.setTooltip(
+              "Write HTML that is inserted directly into the generated page.",
+            );
+          },
+        };
+        Blockly.Blocks.raw_code_snippet = {
+          init() {
+            this.appendDummyInput().appendField("Raw Code Snippet");
+            this.appendDummyInput().appendField(
+              new CodeSnippetField(
+                "// This code is inserted exactly as written",
+                "text/plain",
+                "Normal code editor",
+              ),
+              "CODE",
+            );
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour("#757575");
+            this.setTooltip(
+              "Insert code exactly as written, without adding tags or wrapper text.",
+            );
+          },
+        };
+
+        const COLOR_DOM = "#8e24aa";
+        const COLOR_TYPES = "#6d4c41";
+        const COLOR_LOGIC = "#0097a7";
+        const COLOR_MATH = "#3949ab";
+        const COLOR_UTILITY = "#546e7a";
+        const COLOR_STORAGE = "#ad1457";
+        const valueBlock = (colour, tooltip, build) => ({
+          init() {
+            build(this);
+            this.setInputsInline(true);
+            this.setOutput(true, "js_expression");
+            this.setColour(colour);
+            this.setTooltip(tooltip);
+          },
+        });
+        const actionBlock = (colour, tooltip, build, next = true) => ({
+          init() {
+            build(this);
+            this.setInputsInline(true);
+            this.setPreviousStatement(true);
+            if (next) this.setNextStatement(true);
+            this.setColour(colour);
+            this.setTooltip(tooltip);
+          },
+        });
+
+        // DOM
+        Blockly.Blocks.js_get_element = valueBlock(
+          COLOR_DOM,
+          "document.getElementById(...): returns the element with this ID, or null if the page has none.",
+          (b) => valueSlot(b, "ID", "get element by ID"),
+        );
+        Blockly.Blocks.js_get_element_value = valueBlock(
+          COLOR_DOM,
+          "element.value: returns the current value of an input, as text, or undefined if no element has this ID.",
+          (b) => valueSlot(b, "ID", "get value of element ID"),
+        );
+        Blockly.Blocks.js_set_value = actionBlock(
+          COLOR_DOM,
+          "element.value = ...: changes the value of an input. Connect a 'get element by ID' block (or any block that returns an element).",
+          (b) => {
+            valueSlot(b, "ELEMENT", "set value of");
+            valueSlot(b, "VALUE", "to");
+          },
+        );
+
+        // Type conversion
+        Blockly.Blocks.js_to_number = valueBlock(
+          COLOR_TYPES,
+          "Number(value): converts a value to a number.",
+          (b) => valueSlot(b, "VALUE", "Number of"),
+        );
+        Blockly.Blocks.js_to_string = valueBlock(
+          COLOR_TYPES,
+          "String(value): converts a value to text.",
+          (b) => valueSlot(b, "VALUE", "String of"),
+        );
+
+        // Logic
+        Blockly.Blocks.js_and = valueBlock(
+          COLOR_LOGIC,
+          "true only when both sides are true (&&). Can be nested inside other logic blocks.",
+          (b) => {
+            valueSlot(b, "A");
+            valueSlot(b, "B", "and");
+          },
+        );
+        Blockly.Blocks.js_or = valueBlock(
+          COLOR_LOGIC,
+          "true when at least one side is true (||). Can be nested inside other logic blocks.",
+          (b) => {
+            valueSlot(b, "A");
+            valueSlot(b, "B", "or");
+          },
+        );
+        Blockly.Blocks.js_not = valueBlock(
+          COLOR_LOGIC,
+          "Flips true to false and false to true (!).",
+          (b) => valueSlot(b, "A", "not"),
+        );
+        Blockly.Blocks.js_nullish = valueBlock(
+          COLOR_LOGIC,
+          "Checks whether a value is null or undefined (value == null).",
+          (b) => {
+            valueSlot(b, "VALUE");
+            b.appendDummyInput().appendField(
+              new Blockly.FieldDropdown([
+                ["is null or undefined", "=="],
+                ["is not null or undefined", "!="],
+              ]),
+              "MODE",
+            );
+          },
+        );
+        Blockly.Blocks.js_ternary = valueBlock(
+          COLOR_LOGIC,
+          "condition ? valueIfTrue : valueIfFalse. Can be placed in any value slot and nested inside itself.",
+          (b) => {
+            valueSlot(b, "COND", "if");
+            valueSlot(b, "THEN", "then");
+            valueSlot(b, "ELSE", "else");
+          },
+        );
+
+        // Math
+        Blockly.Blocks.js_math = valueBlock(
+          COLOR_MATH,
+          "Math operator: + add, - subtract, * multiply, / divide, ** power, % remainder. Both sides accept any value block.",
+          (b) => {
+            valueSlot(b, "A");
+            b.appendDummyInput().appendField(
+              new Blockly.FieldDropdown([
+                ["+", "+"],
+                ["-", "-"],
+                ["*", "*"],
+                ["/", "/"],
+                ["**", "**"],
+                ["%", "%"],
+              ]),
+              "OP",
+            );
+            valueSlot(b, "B");
+          },
+        );
+        Blockly.Blocks.js_step = valueBlock(
+          COLOR_MATH,
+          "variable++ / variable--: changes the variable by 1 and returns its previous value. Use a 'do' block to run it as a statement.",
+          (b) => {
+            valueSlot(b, "TARGET");
+            b.appendDummyInput().appendField(
+              new Blockly.FieldDropdown([
+                ["++", "++"],
+                ["--", "--"],
+              ]),
+              "OP",
+            );
+          },
+        );
+        Blockly.Blocks.js_assign_op = valueBlock(
+          COLOR_MATH,
+          "variable += value / variable -= value: updates the variable and returns the new value. Use a 'do' block to run it as a statement.",
+          (b) => {
+            valueSlot(b, "TARGET");
+            b.appendDummyInput().appendField(
+              new Blockly.FieldDropdown([
+                ["+=", "+="],
+                ["-=", "-="],
+              ]),
+              "OP",
+            );
+            valueSlot(b, "VALUE");
+          },
+        );
+
+        Blockly.Blocks.js_math_fn = valueBlock(
+          COLOR_MATH,
+          "Math function of one value: square root, cube root, rounding, absolute value, sign, and every sine/cosine/tangent variation. Trigonometry uses radians.",
+          (b) => {
+            b.appendDummyInput().appendField(
+              new Blockly.FieldDropdown([
+                ["square root", "sqrt"],
+                ["cube root", "cbrt"],
+                ["round", "round"],
+                ["round down (floor)", "floor"],
+                ["round up (ceil)", "ceil"],
+                ["absolute value", "abs"],
+                ["sign (-1, 0, 1)", "sign"],
+                ["sin", "sin"],
+                ["cos", "cos"],
+                ["tan", "tan"],
+                ["asin (inverse sin)", "asin"],
+                ["acos (inverse cos)", "acos"],
+                ["atan (inverse tan)", "atan"],
+                ["sinh", "sinh"],
+                ["cosh", "cosh"],
+                ["tanh", "tanh"],
+                ["asinh", "asinh"],
+                ["acosh", "acosh"],
+                ["atanh", "atanh"],
+              ]),
+              "FN",
+            );
+            valueSlot(b, "VALUE", "of");
+          },
+        );
+        Blockly.Blocks.js_pi = {
+          init() {
+            this.appendDummyInput().appendField("π (pi)");
+            this.setOutput(true, "js_expression");
+            this.setColour(COLOR_MATH);
+            this.setTooltip("Math.PI: the number pi (3.14159...).");
+          },
+        };
+        Blockly.Blocks.js_random = {
+          init() {
+            this.appendDummyInput().appendField("random number (0 to 1)");
+            this.setOutput(true, "js_expression");
+            this.setColour(COLOR_MATH);
+            this.setTooltip(
+              "Math.random(): a random decimal from 0 up to, but not including, 1.",
+            );
+          },
+        };
+        Blockly.Blocks.js_min = valueBlock(
+          COLOR_MATH,
+          "Math.min(a, b): the smaller of two values. Both sides accept any value block.",
+          (b) => {
+            valueSlot(b, "A", "min of");
+            valueSlot(b, "B", "and");
+          },
+        );
+        Blockly.Blocks.js_max = valueBlock(
+          COLOR_MATH,
+          "Math.max(a, b): the larger of two values. Both sides accept any value block.",
+          (b) => {
+            valueSlot(b, "A", "max of");
+            valueSlot(b, "B", "and");
+          },
+        );
+
+        // Utilities
+        Blockly.Blocks.js_do = actionBlock(
+          COLOR_UTILITY,
+          "Run a value block as a statement, e.g. count++ or count += 1.",
+          (b) => valueSlot(b, "VALUE", "do"),
+        );
+        Blockly.Blocks.js_console_log = actionBlock(
+          COLOR_UTILITY,
+          "console.log(...): prints a value to the preview console.",
+          (b) => valueSlot(b, "VALUE", "console.log"),
+        );
+        Blockly.Blocks.js_return = actionBlock(
+          COLOR_UTILITY,
+          "return: ends the function or event handler, optionally sending back a value.",
+          (b) => valueSlot(b, "VALUE", "return"),
+          false,
+        );
+        Blockly.Blocks.js_call_function_value = valueBlock(
+          "#f44336",
+          "Call a function and use the value it returns.",
+          (b) => {
+            valueSlot(b, "NAME", "call function");
+            valueSlot(b, "ARGUMENT", "with argument (optional)");
+          },
+        );
+
+        // Local storage
+        Blockly.Blocks.js_storage_set = actionBlock(
+          COLOR_STORAGE,
+          "localStorage.setItem(key, value): stores a value in the browser.",
+          (b) => {
+            valueSlot(b, "KEY", "store key");
+            valueSlot(b, "VALUE", "value");
+          },
+        );
+        Blockly.Blocks.js_storage_get = valueBlock(
+          COLOR_STORAGE,
+          "localStorage.getItem(key): returns the stored value as text, or null if nothing is stored.",
+          (b) => valueSlot(b, "KEY", "get stored value for key"),
+        );
+        Blockly.Blocks.js_storage_remove = actionBlock(
+          COLOR_STORAGE,
+          "localStorage.removeItem(key): removes one stored value.",
+          (b) => valueSlot(b, "KEY", "remove stored key"),
+        );
+        Blockly.Blocks.js_storage_clear = actionBlock(
+          COLOR_STORAGE,
+          "localStorage.clear(): removes every stored value.",
+          (b) => b.appendDummyInput().appendField("clear all stored values"),
+        );
+
+        // Assets and rendering
+        const COLOR_ASSET = "#00897b";
+        Blockly.Blocks.asset_ref = valueBlock(
+          COLOR_ASSET,
+          "An imported asset (image, sound, video or font) as a data URI. Works in image, audio and video sources and in JavaScript value slots.",
+          (b) =>
+            b.appendDummyInput().appendField("asset").appendField(
+              new Blockly.FieldDropdown(() =>
+                assets.length ? assets.map((a) => [a.name, a.name]) : [["(no assets yet)", "none"]],
+              ),
+              "ASSET",
+            ),
+        );
+        const mediaBlock = (tip, label) => ({
+          init() {
+            valueSlot(this, "SRC", label);
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour(COLOR_ASSET);
+            this.setTooltip(tip);
+          },
+        });
+        Blockly.Blocks.html_audio = mediaBlock("Add an audio player.", "audio source");
+        Blockly.Blocks.html_video = mediaBlock("Add a video player.", "video source");
+        Blockly.Blocks.html_canvas = {
+          init() {
+            valueSlot(this, "ID", "canvas ID");
+            this.appendDummyInput()
+              .appendField("width").appendField(new Blockly.FieldNumber(400, 1, 4000), "W")
+              .appendField("height").appendField(new Blockly.FieldNumber(240, 1, 4000), "H");
+            addAttributesInput(this);
+            this.setPreviousStatement(true);
+            this.setNextStatement(true);
+            this.setColour(COLOR_ASSET);
+            this.setTooltip("A drawing surface. Use the canvas blocks to draw on it by ID.");
+          },
+        };
+        Blockly.Blocks.asset_play_sound = actionBlock(COLOR_ASSET, "Play a sound. Use inside an event block so browsers allow audio.", (b) => valueSlot(b, "SRC", "play sound"));
+        const canvasBlock = (label, slots) =>
+          actionBlock(COLOR_ASSET, `Canvas: ${label}.`, (b) => {
+            valueSlot(b, "ID", `canvas ${label} on ID`);
+            slots.forEach(([n, l]) => valueSlot(b, n, l));
+          });
+        Blockly.Blocks.canvas_clear = canvasBlock("clear", []);
+        Blockly.Blocks.canvas_rect = canvasBlock("rectangle", [["COLOR", "color"], ["X", "x"], ["Y", "y"], ["W", "width"], ["H", "height"]]);
+        Blockly.Blocks.canvas_circle = canvasBlock("circle", [["COLOR", "color"], ["X", "x"], ["Y", "y"], ["R", "radius"]]);
+        Blockly.Blocks.canvas_text = canvasBlock("text", [["TEXT", "text"], ["COLOR", "color"], ["FONT", "font"], ["X", "x"], ["Y", "y"]]);
+        Blockly.Blocks.canvas_image = canvasBlock("image", [["SRC", "image"], ["X", "x"], ["Y", "y"], ["W", "width"], ["H", "height"]]);
+
+        // Default js_value content for every text slot
+        const SLOT_DEFAULTS = {
+          html_title: { TEXT: "My page" },
+          html_structure: { TEXT: "" },
+          html_heading: { TEXT: "Hello, world!" },
+          html_paragraph: { TEXT: "Write something here." },
+          html_button: { TEXT: "Click me" },
+          html_input: { PLACEHOLDER: "Enter a value" },
+          html_link: { TEXT: "Visit this link", URL: "https://example.com" },
+          html_image: { URL: "https://example.com/image.png", ALT: "Description" },
+          html_style: { CODE: "body { font-family: sans-serif; }" },
+          html_meta: { NAME: "description", CONTENT: "A short page description" },
+          css_rule: { SELECTOR: "body", VALUE: "#333333" },
+          css_responsive: { SELECTOR: "body", VALUE: "100%" },
+          html_attributes: {
+            ID: "", CLASS: "", TITLE: "", ROLE: "", ARIA_LABEL: "", DATA_NAME: "", DATA_VALUE: "",
+          },
+          js_event: { ID: "myButton" },
+          js_set_text: { ID: "myMessage", VALUE: '"Updated text"' },
+          js_visibility: { ID: "panel" },
+          js_variable: { NAME: "var_name", VALUE: "0" },
+          js_get_variable: { NAME: "var_name" },
+          js_set_variable: { NAME: "var_name", VALUE: "0" },
+          js_compare: { LEFT: "count", RIGHT: "0" },
+          js_loop: { NAME: "i", START: "0", END: "10" },
+          js_function: { NAME: "myFunction", PARAMETER: "" },
+          js_call_function: { NAME: "myFunction" },
+          js_call_function_value: { NAME: "myFunction" },
+          js_get_element: { ID: "myInput" },
+          js_get_element_value: { ID: "myInput" },
+          js_set_value: { VALUE: '"Hello"' },
+          js_to_number: { VALUE: '"42"' },
+          js_to_string: { VALUE: "42" },
+          js_and: { A: "true", B: "false" },
+          js_or: { A: "true", B: "false" },
+          js_not: { A: "true" },
+          js_nullish: { VALUE: "myVar" },
+          js_ternary: { COND: "true", THEN: '"yes"', ELSE: '"no"' },
+          js_math: { A: "1", B: "1" },
+          js_step: { TARGET: "count" },
+          js_assign_op: { TARGET: "count", VALUE: "1" },
+          js_math_fn: { VALUE: "9" },
+          js_min: { A: "1", B: "2" },
+          js_max: { A: "1", B: "2" },
+          js_console_log: { VALUE: '"Hello"' },
+          js_storage_set: { KEY: "myKey", VALUE: '"hello"' },
+          js_storage_get: { KEY: "myKey" },
+          js_storage_remove: { KEY: "myKey" },
+          html_canvas: { ID: "game" },
+          canvas_clear: { ID: "game" },
+          canvas_rect: { ID: "game", COLOR: '"#ff5722"', X: "20", Y: "20", W: "100", H: "60" },
+          canvas_circle: { ID: "game", COLOR: '"#2196f3"', X: "200", Y: "100", R: "40" },
+          canvas_text: { ID: "game", TEXT: '"Hello canvas"', COLOR: '"#888888"', FONT: '"24px sans-serif"', X: "20", Y: "200" },
+          canvas_image: { ID: "game", X: "20", Y: "100", W: "100", H: "100" },
+        };
+        const applyToolboxDefaults = () => {
+          document
+            .getElementById("toolbox")
+            .querySelectorAll("block")
+            .forEach((blockElement) => {
+              const defaults = SLOT_DEFAULTS[blockElement.getAttribute("type")];
+              if (!defaults) return;
+              Object.entries(defaults).forEach(([input, text]) => {
+                const exists = [...blockElement.children].some(
+                  (child) =>
+                    child.tagName.toLowerCase() === "value" &&
+                    child.getAttribute("name") === input,
+                );
+                if (exists) return;
+                const value = document.createElement("value");
+                value.setAttribute("name", input);
+                const child = document.createElement("block");
+                child.setAttribute("type", "js_value");
+                const valueField = document.createElement("field");
+                valueField.setAttribute("name", "VALUE");
+                valueField.textContent = text;
+                child.append(valueField);
+                value.append(child);
+                blockElement.append(value);
+              });
+            });
+        };
+
+        // Upgrade workspaces saved before text fields became js_value blocks
+        const FIELD_TO_INPUT = {
+          html_title: ["TEXT"], html_structure: ["TEXT"], html_heading: ["TEXT"],
+          html_paragraph: ["TEXT"], html_button: ["TEXT"], html_input: ["PLACEHOLDER"],
+          html_link: ["TEXT", "URL"], html_image: ["URL", "ALT"], html_style: ["CODE"],
+          html_meta: ["NAME", "CONTENT"], css_rule: ["SELECTOR", "VALUE"],
+          css_responsive: ["SELECTOR", "VALUE"],
+          html_attributes: ["ID", "CLASS", "TITLE", "ROLE", "ARIA_LABEL", "DATA_NAME", "DATA_VALUE"],
+          js_event: ["ID"], js_visibility: ["ID"], js_get_variable: ["NAME"],
+          js_set_variable: ["NAME"], js_loop: ["NAME", "START", "END"],
+          js_function: ["NAME", "PARAMETER"], js_call_function: ["NAME"],
+          js_variable: ["NAME"], js_set_text: ["ID"],
+        };
+        const migrateBlockState = (state) => {
+          if (!state || typeof state !== "object") return;
+          const jsValue = (text) => ({
+            block: { type: "js_value", fields: { VALUE: String(text ?? "") } },
+          });
+          if (state.type === "css_snippet") {
+            const code = state.fields?.CODE ?? "";
+            state.type = "html_style";
+            state.fields = {};
+            state.inputs = { ...(state.inputs || {}), CODE: jsValue(code) };
+          }
+          const fields = state.fields || {};
+          state.inputs = state.inputs || {};
+          const inputs = state.inputs;
+          (FIELD_TO_INPUT[state.type] || []).forEach((name) => {
+            if (name in fields) {
+              if (!inputs[name]) inputs[name] = jsValue(fields[name]);
+              delete fields[name];
+            }
+          });
+          if (state.type === "js_set_text" && "TEXT" in fields) {
+            if (!inputs.VALUE) inputs.VALUE = jsValue(JSON.stringify(fields.TEXT));
+            delete fields.TEXT;
+          }
+          if (state.type === "js_variable") {
+            if (inputs?.GETTER) {
+              inputs.VALUE = inputs.GETTER;
+              delete inputs.GETTER;
+              delete fields.VALUE;
+            } else if ("VALUE" in fields) {
+              if (!inputs.VALUE) inputs.VALUE = jsValue(fields.VALUE);
+              delete fields.VALUE;
+            }
+          }
+          Object.values(state.inputs || {}).forEach((input) => {
+            migrateBlockState(input.block);
+            migrateBlockState(input.shadow);
+          });
+          if (state.next) migrateBlockState(state.next.block);
+        };
+        const migrateWorkspaceState = (state) => {
+          (state?.blocks?.blocks || []).forEach(migrateBlockState);
+        };
+        const migrateWorkspaceXml = (root) => {
+          const doc = root.ownerDocument;
+          const direct = (parent, tag, name) =>
+            [...parent.children].find(
+              (child) => child.tagName.toLowerCase() === tag && child.getAttribute("name") === name,
+            );
+          const jsValueValue = (inputName, text) => {
+            const value = doc.createElement("value");
+            value.setAttribute("name", inputName);
+            const block = doc.createElement("block");
+            block.setAttribute("type", "js_value");
+            const field = doc.createElement("field");
+            field.setAttribute("name", "VALUE");
+            field.textContent = String(text ?? "");
+            block.append(field);
+            value.append(block);
+            return value;
+          };
+          [...root.querySelectorAll("block")].forEach((block) => {
+            let type = block.getAttribute("type");
+            if (type === "css_snippet") {
+              const code = direct(block, "field", "CODE");
+              block.setAttribute("type", "html_style");
+              if (code) {
+                block.append(jsValueValue("CODE", code.textContent));
+                code.remove();
+              }
+              type = "html_style";
+            }
+            (FIELD_TO_INPUT[type] || []).forEach((name) => {
+              const oldField = direct(block, "field", name);
+              if (!oldField) return;
+              if (!direct(block, "value", name)) {
+                block.append(jsValueValue(name, oldField.textContent));
+              }
+              oldField.remove();
+            });
+            if (type === "js_set_text") {
+              const oldText = direct(block, "field", "TEXT");
+              if (oldText) {
+                if (!direct(block, "value", "VALUE")) {
+                  block.append(jsValueValue("VALUE", JSON.stringify(oldText.textContent)));
+                }
+                oldText.remove();
+              }
+            }
+            if (type === "js_variable") {
+              const getter = direct(block, "value", "GETTER");
+              const oldValue = direct(block, "field", "VALUE");
+              if (getter) {
+                getter.setAttribute("name", "VALUE");
+                oldValue?.remove();
+              } else if (oldValue) {
+                block.append(jsValueValue("VALUE", oldValue.textContent));
+                oldValue.remove();
+              }
+            }
+          });
+        };
+
+        const setStatus = (message, isError = false) => {
+          statusMessage.textContent = message;
+          statusMessage.classList.toggle("error", isError);
+        };
+        const clearConsole = () => {
+          consoleOutput.replaceChildren();
+          const emptyMessage = document.createElement("div");
+          emptyMessage.className = "console-empty";
+          emptyMessage.textContent = "Console output will appear here.";
+          consoleOutput.append(emptyMessage);
+        };
+        const appendConsoleEntry = (level, message) => {
+          consoleOutput.querySelector(".console-empty")?.remove();
+          const entry = document.createElement("div");
+          entry.className = `console-entry${level === "error" ? " error" : ""}`;
+          entry.textContent = message;
+          consoleOutput.append(entry);
+          while (consoleOutput.children.length > 250) {
+            consoleOutput.firstElementChild.remove();
+          }
+          consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        };
+        const makePreviewDocument = (html, token) => {
+          const monitorScript = `<script>
+            (() => {
+              const token = ${JSON.stringify(token)};
+              const send = (level, message) => {
+                parent.postMessage({
+                  kind: "blockly-preview-console",
+                  token,
+                  level,
+                  message: String(message)
+                }, "*");
+              };
+              const format = value => {
+                if (value instanceof Error) return value.stack || value.message;
+                if (typeof value === "string") return value;
+                try {
+                  const json = JSON.stringify(value);
+                  return json === undefined ? String(value) : json;
+                } catch {
+                  return String(value);
+                }
+              };
+              try { window.localStorage.getItem("__probe__"); } catch {
+                const memory = new Map();
+                const shim = {
+                  getItem: (key) => (memory.has(String(key)) ? memory.get(String(key)) : null),
+                  setItem: (key, value) => { memory.set(String(key), String(value)); },
+                  removeItem: (key) => { memory.delete(String(key)); },
+                  clear: () => { memory.clear(); },
+                  key: (index) => [...memory.keys()][index] ?? null,
+                  get length() { return memory.size; },
+                };
+                try { Object.defineProperty(window, "localStorage", { configurable: true, value: shim }); } catch {}
+              }
+              ["log", "info", "warn", "error", "debug"].forEach(level => {
+                const original = console[level].bind(console);
+                console[level] = (...args) => {
+                  original(...args);
+                  send(level === "error" ? "error" : "log", args.map(format).join(" "));
+                };
+              });
+              window.addEventListener("error", event => {
+                send("error", event.message + (event.filename ? " (" + event.filename + ":" + event.lineno + ")" : ""));
+              });
+              window.addEventListener("unhandledrejection", event => {
+                send("error", "Unhandled promise rejection: " + format(event.reason));
+              });
+            })();
+          <\/script>`;
+          return /<head\b[^>]*>/i.test(html)
+            ? html.replace(/<head\b[^>]*>/i, (head) => head + monitorScript)
+            : monitorScript + html;
+        };
+        const initializeStandaloneHtmlEditor = () => {
+          if (
+            !window.CodeMirror ||
+            standaloneHtmlEditor ||
+            standaloneHtmlEditorElement.value.length > standaloneHtmlCodeMirrorLimit
+          ) {
+            return;
+          }
+          standaloneHtmlEditor = CodeMirror.fromTextArea(
+            standaloneHtmlEditorElement,
+            {
+              mode: "xml",
+              theme:
+                document.documentElement.dataset.theme === "light"
+                  ? "default"
+                  : "dracula",
+              lineNumbers: true,
+              indentUnit: 2,
+              tabSize: 2,
+              lineWrapping: false,
+            },
+          );
+          standaloneHtmlEditor.on("change", () => {
+            htmlEditorStatus.textContent =
+              "HTML changes are local. Export HTML to save them.";
+          });
+        };
+        const setStandaloneHtml = (contents) => {
+          const isLargeFile =
+            contents.length > standaloneHtmlCodeMirrorLimit;
+          if (isLargeFile && standaloneHtmlEditor) {
+            standaloneHtmlEditor.toTextArea();
+            standaloneHtmlEditor = null;
+          }
+          standaloneHtmlEditorElement.value = contents;
+          if (!isLargeFile) {
+            initializeStandaloneHtmlEditor();
+            standaloneHtmlEditor?.setValue(contents);
+          }
+          return isLargeFile;
+        };
+        const ASSET_KEY = "blockly-creator-assets-v1";
+        const $ = (id) => document.getElementById(id);
+        const assetNote = $("assetNote");
+        const b64Status = $("b64Status");
+        const fmtSize = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
+        const copyText = async (text, note) => {
+          try { await navigator.clipboard.writeText(text); note.textContent = "Copied."; }
+          catch { note.textContent = "Copy was blocked by the browser."; }
+        };
+        const saveAssets = () => {
+          const total = assets.reduce((n, a) => n + a.size, 0);
+          try {
+            localStorage.setItem(ASSET_KEY, JSON.stringify(assets));
+            assetNote.textContent = `${assets.length} asset(s), ${fmtSize(total)}. Kept in this browser. Assets are embedded in the generated HTML.`;
+          } catch {
+            assetNote.textContent = "Assets are kept for this session only (too large to store in the browser).";
+          }
+        };
+        const loadAssets = () => {
+          try {
+            const saved = JSON.parse(localStorage.getItem(ASSET_KEY) || "[]");
+            if (Array.isArray(saved)) assets = saved.filter((a) => a && a.name && a.dataUrl);
+          } catch {}
+        };
+        const readDataUrl = (file) => new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result);
+          r.onerror = () => rej(r.error);
+          r.readAsDataURL(file);
+        });
+        const uniqueName = (name) => {
+          const dot = name.lastIndexOf(".");
+          const base = dot > 0 ? name.slice(0, dot) : name;
+          const ext = dot > 0 ? name.slice(dot) : "";
+          let n = name, i = 2;
+          while (assets.some((a) => a.name === n)) n = `${base}-${i++}${ext}`;
+          return n;
+        };
+        const addAsset = (name, dataUrl, type, size) => {
+          assets.push({ id: crypto.randomUUID(), name: uniqueName(name), type, size, dataUrl });
+          saveAssets();
+          renderAssets();
+        };
+        const isFont = (a) => /\.(woff2?|ttf|otf)$/i.test(a.name);
+        const renderAssets = () => {
+          const list = $("assetList");
+          list.replaceChildren();
+          assets.forEach((a) => {
+            const row = document.createElement("div");
+            row.className = "asset-row";
+            let thumb;
+            if (a.type.startsWith("image/")) { thumb = document.createElement("img"); thumb.src = a.dataUrl; thumb.alt = ""; thumb.className = "asset-thumb"; }
+            else { thumb = document.createElement("div"); thumb.className = "asset-thumb"; thumb.textContent = a.type.startsWith("audio/") ? "🔊" : a.type.startsWith("video/") ? "🎬" : isFont(a) ? "🔤" : "📄"; }
+            const info = document.createElement("div");
+            const name = document.createElement("input");
+            name.value = a.name;
+            name.setAttribute("aria-label", "Asset name");
+            name.addEventListener("change", () => {
+              const next = name.value.trim();
+              if (!next || assets.some((o) => o !== a && o.name === next)) { name.value = a.name; return; }
+              const old = a.name;
+              a.name = next;
+              try { workspace.getAllBlocks(false).forEach((b) => { if (b.type === "asset_ref" && b.getFieldValue("ASSET") === old) b.setFieldValue(next, "ASSET"); }); } catch {}
+              saveAssets();
+            });
+            const meta = document.createElement("div");
+            meta.className = "panel-description";
+            meta.textContent = `${a.type || "file"} · ${fmtSize(a.size)}`;
+            const actions = document.createElement("div");
+            actions.className = "asset-actions";
+            const btn = (label, fn) => { const b = document.createElement("button"); b.className = "button"; b.type = "button"; b.textContent = label; b.addEventListener("click", fn); actions.append(b); };
+            if (a.type.startsWith("audio/")) btn("Play", () => new Audio(a.dataUrl).play());
+            btn("Copy data URI", () => copyText(a.dataUrl, assetNote));
+            btn("Copy CSS url()", () => copyText(`url("${a.dataUrl}")`, assetNote));
+            if (isFont(a)) btn("Copy @font-face", () => copyText(`@font-face {\n  font-family: "${a.name.replace(/\.[^.]+$/, "")}";\n  src: url("${a.dataUrl}");\n}`, assetNote));
+            btn("Delete", () => { assets = assets.filter((o) => o !== a); saveAssets(); renderAssets(); });
+            info.append(name, meta, actions);
+            row.append(thumb, info);
+            list.append(row);
+          });
+          if (!assets.length) list.textContent = "No assets yet.";
+        };
+        const addFiles = async (files) => {
+          for (const f of files) {
+            try { addAsset(f.name, await readDataUrl(f), f.type || "application/octet-stream", f.size); }
+            catch { assetNote.textContent = `Could not read ${f.name}.`; }
+          }
+        };
+        $("assetImportButton").addEventListener("click", () => $("assetFileInput").click());
+        $("assetFileInput").addEventListener("change", (e) => { addFiles([...e.target.files]); e.target.value = ""; });
+        const drop = $("assetDrop");
+        drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+        drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+        drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); addFiles([...e.dataTransfer.files]); });
+
+        // Base64 converter
+        const bytesToB64 = (bytes) => {
+          let s = "";
+          for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+          return btoa(s);
+        };
+        const parseB64 = (text) => {
+          let t = text.trim();
+          const m = /^data:([^;,]*)[^,]*,/i.exec(t);
+          if (m) t = t.slice(m[0].length);
+          t = t.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+          while (t.length % 4) t += "=";
+          const bin = atob(t);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          return { bytes, mime: (m && m[1]) || "application/octet-stream" };
+        };
+        const b64In = $("b64Input"), b64Out = $("b64Output");
+        $("b64Encode").addEventListener("click", () => {
+          let out = bytesToB64(new TextEncoder().encode(b64In.value));
+          if ($("b64UrlSafe").checked) out = out.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+          b64Out.value = out; b64Status.textContent = "Encoded as UTF-8 text.";
+        });
+        $("b64Decode").addEventListener("click", () => {
+          try { b64Out.value = new TextDecoder().decode(parseB64(b64In.value).bytes); b64Status.textContent = "Decoded."; }
+          catch { b64Status.textContent = "That is not valid base64."; }
+        });
+        $("b64FileButton").addEventListener("click", () => $("b64FileInput").click());
+        $("b64FileInput").addEventListener("change", async (e) => {
+          const f = e.target.files[0]; e.target.value = "";
+          if (!f) return;
+          let uri = await readDataUrl(f);
+          if ($("b64Raw").checked) uri = uri.slice(uri.indexOf(",") + 1);
+          b64Out.value = uri; b64Status.textContent = `${f.name} converted (${fmtSize(f.size)}).`;
+        });
+        $("b64Copy").addEventListener("click", () => copyText(b64Out.value, b64Status));
+        $("b64Swap").addEventListener("click", () => { b64In.value = b64Out.value; });
+        $("b64AddAsset").addEventListener("click", () => {
+          try {
+            const { bytes, mime } = parseB64(b64In.value);
+            if (!/^data:/i.test(b64In.value.trim())) throw new Error();
+            addAsset("pasted-asset", b64In.value.trim(), mime, bytes.length);
+            b64Status.textContent = "Saved as an asset.";
+          } catch { b64Status.textContent = "Paste a full data: URI to save it as an asset."; }
+        });
+        $("b64Download").addEventListener("click", () => {
+          try {
+            const { bytes, mime } = parseB64(b64In.value);
+            const ext = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp", "image/svg+xml": "svg", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/ogg": "ogg", "video/mp4": "mp4", "video/webm": "webm", "application/pdf": "pdf", "text/plain": "txt" }[mime] || "bin";
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([bytes], { type: mime }));
+            a.download = `decoded.${ext}`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+          } catch { b64Status.textContent = "That is not valid base64."; }
+        });
+        loadAssets();
+        renderAssets();
+        saveAssets();
+        $("deviceSelect").addEventListener("change", (e) => {
+          const w = e.target.value;
+          previewFrame.style.width = w === "fit" ? "100%" : `min(${w}px, 100%)`;
+          previewFrame.style.margin = w === "fit" ? "" : "0 auto";
+        });
+
+        const switchTab = (tab) => {
+          const showHtml = tab === "html";
+          const showAssets = tab === "assets";
+          blocklyTab.hidden = showHtml || showAssets;
+          htmlEditorTab.hidden = !showHtml;
+          assetsTab.hidden = !showAssets;
+          blocklyTabButton.setAttribute("aria-selected", String(!showHtml && !showAssets));
+          htmlTabButton.setAttribute("aria-selected", String(showHtml));
+          assetsTabButton.setAttribute("aria-selected", String(showAssets));
+          blocklyTabButton.tabIndex = !showHtml && !showAssets ? 0 : -1;
+          htmlTabButton.tabIndex = showHtml ? 0 : -1;
+          assetsTabButton.tabIndex = showAssets ? 0 : -1;
+          if (showHtml) {
+            initializeStandaloneHtmlEditor();
+            requestAnimationFrame(() => standaloneHtmlEditor?.refresh());
+          } else {
+            requestAnimationFrame(() => Blockly.svgResize(workspace));
+          }
+        };
+        const setColorTheme = (theme) => {
+          const isLight = theme === "light";
+          document.documentElement.dataset.theme = theme;
+          themeToggleButton.textContent = isLight ? "☾" : "☀";
+          themeToggleButton.setAttribute(
+            "aria-label",
+            `Switch to ${isLight ? "dark" : "light"} theme`,
+          );
+          themeToggleButton.title = `Switch to ${isLight ? "dark" : "light"} theme`;
+          document
+            .querySelector('meta[name="theme-color"]')
+            .setAttribute("content", isLight ? "#f4f5f7" : "#10131b");
+          workspace?.setTheme(isLight ? lightBlocklyTheme : darkBlocklyTheme);
+          const editorTheme = isLight ? "default" : "dracula";
+          codeMirrorEditor?.setOption("theme", editorTheme);
+          standaloneHtmlEditor?.setOption("theme", editorTheme);
+        };
+        window.addEventListener("message", (event) => {
+          const data = event.data;
+          if (
+            event.source !== previewFrame.contentWindow ||
+            !activePreviewToken ||
+            !data ||
+            data.kind !== "blockly-preview-console" ||
+            data.token !== activePreviewToken ||
+            !["log", "error"].includes(data.level) ||
+            typeof data.message !== "string"
+          ) {
+            return;
+          }
+          appendConsoleEntry(data.level, data.message);
+        });
+        const downloadFile = (contents, filename, type) => {
+          const url = URL.createObjectURL(new Blob([contents], { type }));
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        };
+        const openHtmlInNewTab = (html) => {
+          const previewWindow = window.open("about:blank", "_blank");
+          if (!previewWindow) return false;
+          const url = URL.createObjectURL(
+            new Blob([html], { type: "text/html" }),
+          );
+          previewUrls.add(url);
+          try {
+            previewWindow.opener = null;
+            previewWindow.location.replace(url);
+            return true;
+          } catch (error) {
+            previewWindow.close();
+            previewUrls.delete(url);
+            URL.revokeObjectURL(url);
+            throw error;
+          }
+        };
+        const makeBlock = (workspace, type, values = {}) => {
+          const block = workspace.newBlock(type);
+          const slots = [];
+          Object.entries(values).forEach(([name, value]) => {
+            if (block.getField(name)) block.setFieldValue(value, name);
+            else if (block.getInput(name)) slots.push([name, value]);
+          });
+          block.initSvg();
+          block.render();
+          slots.forEach(([name, value]) => {
+            const child = makeBlock(workspace, "js_value", { VALUE: value });
+            block.getInput(name).connection.connect(child.outputConnection);
+          });
+          return block;
+        };
+        const connectStatement = (parent, input, child) => {
+          parent.getInput(input).connection.connect(child.previousConnection);
+        };
+        const getPageNotes = (html) => {
+          const parsed = new DOMParser().parseFromString(html, "text/html");
+          const notes = [];
+          const ids = [...parsed.querySelectorAll("[id]")].map((element) =>
+            element.id,
+          );
+          if (new Set(ids).size !== ids.length) {
+            notes.push("check for duplicate element IDs");
+          }
+          if (parsed.querySelector("img:not([alt])")) {
+            notes.push("add alt text to every image");
+          }
+          const unlabeledControl = [
+            ...parsed.querySelectorAll(
+              'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), select, textarea',
+            ),
+          ].some(
+            (control) =>
+              !control.labels?.length &&
+              !control.hasAttribute("aria-label") &&
+              !control.hasAttribute("aria-labelledby"),
+          );
+          if (unlabeledControl) {
+            notes.push("add a label or accessible name to form controls");
+          }
+          if (!/@media\b/i.test(html)) {
+            notes.push("consider adding a responsive breakpoint");
+          }
+          return notes;
+        };
+
+        try {
+          if (!window.Blockly) {
+            throw new Error(
+              "Blockly could not be loaded. Check your internet connection and reload this page.",
+            );
+          }
+          const makeBlocklyTheme = (name, colors) =>
+            Blockly.Theme.defineTheme(name, {
+              base: Blockly.Themes.Zelos,
+              componentStyles: {
+                workspaceBackgroundColour: colors.workspace,
+                toolboxBackgroundColour: colors.surface,
+                toolboxForegroundColour: colors.text,
+                flyoutBackgroundColour: colors.raised,
+                flyoutForegroundColour: colors.text,
+                flyoutOpacity: 1,
+                scrollbarColour: colors.scrollbar,
+                scrollbarOpacity: 0.6,
+                insertionMarkerColour: colors.accent,
+                insertionMarkerOpacity: 0.3,
+                cursorColour: colors.accent,
+              },
+            });
+          darkBlocklyTheme = makeBlocklyTheme("creator-dark", {
+            workspace: "#121620",
+            surface: "#171b25",
+            raised: "#1d2230",
+            text: "#edf0f7",
+            scrollbar: "#464d5e",
+            accent: "#a78bfa",
+          });
+          lightBlocklyTheme = makeBlocklyTheme("creator-light", {
+            workspace: "#f7f8fa",
+            surface: "#ffffff",
+            raised: "#eef0f3",
+            text: "#20242b",
+            scrollbar: "#c2c7d0",
+            accent: "#7056b8",
+          });
+          applyToolboxDefaults();
+          workspace = Blockly.inject("blocklyDiv", {
+            toolbox: document.getElementById("toolbox"),
+            theme: darkBlocklyTheme,
+            grid: { spacing: 24, length: 3, colour: "#303646", snap: true },
+            media: "https://unpkg.com/blockly@12.3.1/media/",
+            trashcan: true,
+            zoom: {
+              controls: true,
+              wheel: true,
+              startScale: 0.9,
+              maxScale: 1.3,
+              minScale: 0.65,
+              scaleSpeed: 1.1,
+            },
+            move: { scrollbars: true, drag: true, wheel: true },
+            renderer: "zelos",
+            sounds: false,
+          });
+
+          const page = makeBlock(workspace, "html_page");
+          const head = makeBlock(workspace, "html_head");
+          const title = makeBlock(workspace, "html_title", {
+            TEXT: "My first page",
+          });
+          const body = makeBlock(workspace, "html_body");
+          const section = makeBlock(workspace, "html_section");
+          const heading = makeBlock(workspace, "html_heading", {
+            LEVEL: "h1",
+            TEXT: "Hello, world!",
+          });
+          const paragraph = makeBlock(workspace, "html_paragraph", {
+            TEXT: "Build a page by connecting blocks, then make it your own.",
+          });
+          const button = makeBlock(workspace, "html_button", {
+            TEXT: "Get started",
+          });
+
+          connectStatement(page, "HEAD", head);
+          connectStatement(head, "CHILDREN", title);
+          connectStatement(page, "BODY", body);
+          connectStatement(body, "CHILDREN", section);
+          connectStatement(section, "CHILDREN", heading);
+          heading.nextConnection.connect(paragraph.previousConnection);
+          paragraph.nextConnection.connect(button.previousConnection);
+
+          const generate = () => {
+            try {
+              const pageBlock = workspace
+                .getTopBlocks(true)
+                .find((block) => block.type === "html_page");
+              if (!pageBlock) {
+                throw new Error(
+                  "Add an HTML page block from the Page category before generating.",
+                );
+              }
+              const html = renderBlock(pageBlock);
+              generatedHtml = html;
+              activePreviewToken = crypto.randomUUID();
+              clearConsole();
+              generatedCode.value = html;
+              previewFrame.srcdoc = makePreviewDocument(
+                html,
+                activePreviewToken,
+              );
+              previewStatus.textContent = "Preview updated";
+              statusDot.classList.add("ready");
+              copyButton.disabled = false;
+              exportHtmlButton.disabled = false;
+              previewNewTabButton.disabled = false;
+              const notes = getPageNotes(html);
+              setStatus(
+                notes.length
+                  ? `Page generated. Notes: ${notes.join("; ")}.`
+                  : "Page generated successfully. Accessibility and responsive checks passed.",
+              );
+            } catch (error) {
+              setStatus(
+                error instanceof Error
+                  ? error.message
+                  : "The page could not be generated.",
+                true,
+              );
+            }
+          };
+
+          let autoTimer;
+          workspace.addChangeListener((event) => {
+            if (!$("autoRender").checked || event.isUiEvent) return;
+            clearTimeout(autoTimer);
+            autoTimer = setTimeout(() => {
+              if (workspace.getTopBlocks(false).some((b) => b.type === "html_page")) generate();
+            }, 700);
+          });
+          generateButton.disabled = false;
+          clearButton.disabled = false;
+          importButton.disabled = false;
+          exportBlocklyButton.disabled = false;
+          standaloneHtmlEditorElement.addEventListener("input", () => {
+            if (!standaloneHtmlEditor) {
+              htmlEditorStatus.textContent =
+                "HTML changes are local. Export HTML to save them.";
+            }
+          });
+          blocklyTabButton.addEventListener("click", () =>
+            switchTab("blockly"),
+          );
+          htmlTabButton.addEventListener("click", () => switchTab("html"));
+          assetsTabButton.addEventListener("click", () => switchTab("assets"));
+          themeToggleButton.addEventListener("click", () => {
+            const nextTheme =
+              document.documentElement.dataset.theme === "light"
+                ? "dark"
+                : "light";
+            setColorTheme(nextTheme);
+          });
+          const tabButtons = [blocklyTabButton, htmlTabButton, assetsTabButton];
+          tabButtons.forEach((button, index) => {
+            button.addEventListener("keydown", (event) => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+              event.preventDefault();
+              const target = event.key === "Home" ? 0 : event.key === "End" ? tabButtons.length - 1 : Math.max(0, Math.min(tabButtons.length - 1, index + (event.key === "ArrowLeft" ? -1 : 1)));
+              tabButtons[target].click();
+              tabButtons[target].focus();
+            });
+          });
+          document
+            .getElementById("clearConsoleButton")
+            .addEventListener("click", clearConsole);
+          document
+            .getElementById("openHtmlButton")
+            .addEventListener("click", () => htmlImportFileInput.click());
+          htmlImportFileInput.addEventListener("change", async () => {
+            const file = htmlImportFileInput.files?.[0];
+            if (!file) return;
+            try {
+              const contents = await file.text();
+              standaloneHtmlFilename = file.name.toLowerCase().endsWith(".htm")
+                ? file.name.replace(/\.htm$/i, ".html")
+                : file.name;
+              const isLargeFile = setStandaloneHtml(contents);
+              switchTab("html");
+              htmlEditorStatus.textContent = isLargeFile
+                ? `Opened ${file.name} in plain-text mode for responsiveness. Export HTML to save edits.`
+                : `Opened ${file.name}. Export HTML to save edits.`;
+            } catch (error) {
+              switchTab("html");
+              htmlEditorStatus.textContent =
+                error instanceof Error
+                  ? `Could not open HTML file: ${error.message}`
+                  : "Could not open the selected HTML file.";
+            } finally {
+              htmlImportFileInput.value = "";
+            }
+          });
+          document
+            .getElementById("exportStandaloneHtmlButton")
+            .addEventListener("click", () => {
+              try {
+                const html = standaloneHtmlEditor
+                  ? standaloneHtmlEditor.getValue()
+                  : standaloneHtmlEditorElement.value;
+                downloadFile(html, standaloneHtmlFilename, "text/html");
+                htmlEditorStatus.textContent = `Exported ${standaloneHtmlFilename}.`;
+              } catch (error) {
+                htmlEditorStatus.textContent =
+                  error instanceof Error
+                    ? `Could not export HTML: ${error.message}`
+                    : "Could not export the HTML file.";
+              }
+            });
+          previewStandaloneHtmlButton.addEventListener("click", () => {
+            const html = standaloneHtmlEditor
+              ? standaloneHtmlEditor.getValue()
+              : standaloneHtmlEditorElement.value;
+            try {
+              if (!openHtmlInNewTab(html)) {
+                htmlEditorStatus.textContent =
+                  "The preview tab was blocked. Allow popups for this page and try again.";
+                return;
+              }
+              htmlEditorStatus.textContent =
+                "Opened the standalone HTML preview in a new tab.";
+            } catch (error) {
+              htmlEditorStatus.textContent =
+                error instanceof Error
+                  ? `Could not open the preview: ${error.message}`
+                  : "Could not open the HTML preview.";
+            }
+          });
+          generateButton.addEventListener("click", generate);
+          togglePreviewButton.addEventListener("click", () => {
+            const isHidden = main.classList.toggle("preview-hidden");
+            togglePreviewButton.textContent = isHidden
+              ? "Show preview"
+              : "Hide preview";
+            togglePreviewButton.setAttribute("aria-expanded", String(!isHidden));
+            requestAnimationFrame(() => Blockly.svgResize(workspace));
+          });
+          previewNewTabButton.addEventListener("click", () => {
+            if (!generatedHtml) return;
+            try {
+              if (!openHtmlInNewTab(generatedHtml)) {
+                setStatus(
+                  "The preview tab was blocked. Allow popups for this page and try again.",
+                  true,
+                );
+                return;
+              }
+              setStatus("Opened the generated page in a new tab.");
+            } catch (error) {
+              setStatus(
+                error instanceof Error
+                  ? `Could not open the preview: ${error.message}`
+                  : "Could not open the preview in a new tab.",
+                true,
+              );
+            }
+          });
+          clearButton.addEventListener("click", () => {
+            workspace.clear();
+            generatedHtml = "";
+            activePreviewToken = null;
+            clearConsole();
+            generatedCode.value = "";
+            previewFrame.srcdoc = "";
+            previewStatus.textContent = "Waiting for blocks";
+            statusDot.classList.remove("ready");
+            copyButton.disabled = true;
+            exportHtmlButton.disabled = true;
+            previewNewTabButton.disabled = true;
+            setStatus("Workspace cleared. Add an HTML page block to start.");
+          });
+          exportBlocklyButton.addEventListener("click", () => {
+            try {
+              const state = Blockly.serialization.workspaces.save(workspace);
+              downloadFile(
+                JSON.stringify(state, null, 2),
+                "blockly-workspace.json",
+                "application/json",
+              );
+              setStatus("Blockly workspace exported as JSON.");
+            } catch (error) {
+              setStatus(
+                error instanceof Error
+                  ? `Could not export blocks: ${error.message}`
+                  : "Could not export blocks.",
+                true,
+              );
+            }
+          });
+          importButton.addEventListener("click", () => importFileInput.click());
+          importFileInput.addEventListener("change", async () => {
+            const file = importFileInput.files && importFileInput.files[0];
+            if (!file) return;
+
+            let stagingWorkspace = null;
+            try {
+              const contents = await file.text();
+              stagingWorkspace = new Blockly.Workspace();
+              if (
+                file.name.toLowerCase().endsWith(".xml") ||
+                contents.trimStart().startsWith("<")
+              ) {
+                const xml = new DOMParser().parseFromString(
+                  contents,
+                  "text/xml",
+                );
+                if (xml.querySelector("parsererror")) {
+                  throw new Error(
+                    "The selected XML file is not valid Blockly workspace XML.",
+                  );
+                }
+                migrateWorkspaceXml(xml.documentElement);
+                Blockly.Xml.domToWorkspace(
+                  xml.documentElement,
+                  stagingWorkspace,
+                );
+              } else {
+                const state = JSON.parse(contents);
+                if (
+                  !state ||
+                  typeof state !== "object" ||
+                  Array.isArray(state)
+                ) {
+                  throw new Error(
+                    "The selected file does not contain a Blockly workspace.",
+                  );
+                }
+                migrateWorkspaceState(state);
+                Blockly.serialization.workspaces.load(state, stagingWorkspace);
+              }
+
+              const importedState =
+                Blockly.serialization.workspaces.save(stagingWorkspace);
+              if (
+                !window.confirm(
+                  "Importing this workspace will replace the blocks currently on the canvas. Continue?",
+                )
+              ) {
+                setStatus(
+                  "Import canceled. The current workspace is unchanged.",
+                );
+                return;
+              }
+              workspace.clear();
+              Blockly.serialization.workspaces.load(importedState, workspace);
+              generatedCode.value = "";
+              previewFrame.srcdoc = "";
+              previewStatus.textContent = "Workspace imported";
+              statusDot.classList.remove("ready");
+              copyButton.disabled = true;
+              exportHtmlButton.disabled = true;
+              setStatus(
+                "Blockly workspace imported. Select Generate to build the preview.",
+              );
+            } catch (error) {
+              setStatus(
+                error instanceof Error
+                  ? `Could not import workspace: ${error.message}`
+                  : "Could not import workspace.",
+                true,
+              );
+            } finally {
+              if (stagingWorkspace) stagingWorkspace.dispose();
+              importFileInput.value = "";
+            }
+          });
+          exportHtmlButton.addEventListener("click", () => {
+            if (!generatedCode.value) {
+              setStatus("Generate the page before exporting HTML.", true);
+              return;
+            }
+            downloadFile(
+              generatedCode.value,
+              "generated-page.html",
+              "text/html;charset=utf-8",
+            );
+            setStatus("Generated HTML exported.");
+          });
+          copyButton.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(generatedCode.value);
+              setStatus("HTML copied to clipboard.");
+            } catch (error) {
+              setStatus(
+                error instanceof Error
+                  ? `Could not copy code: ${error.message}`
+                  : "Could not copy code.",
+                true,
+              );
+            }
+          });
+          window.addEventListener("resize", () => Blockly.svgResize(workspace));
+          setTimeout(() => Blockly.svgResize(workspace), 0);
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Blockly could not be initialized.";
+          setStatus(message, true);
+          previewStatus.textContent = "Editor unavailable";
+        }
+      })();
+    </script>
+  </body>
+</html>
